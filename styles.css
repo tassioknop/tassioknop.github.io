@@ -1,0 +1,220 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+#app {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.upload-section {
+    text-align: center;
+    padding: 20px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.uploaded-images {
+    margin-bottom: 30px;
+}
+
+.uploaded-image-card {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: #fafafa;
+}
+
+.uploaded-image-card img {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-right: 15px;
+}
+
+.image-info {
+    flex: 1;
+}
+
+.image-info input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.layout-selection {
+    margin-bottom: 20px;
+}
+
+.layout-selection button {
+    margin-right: 10px;
+    padding: 10px 15px;
+    border: 1px solid #007bff;
+    background: white;
+    color: #007bff;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.layout-selection button:hover {
+    background: #007bff;
+    color: white;
+}
+
+.layout-selection button.active {
+    background: #007bff;
+    color: white;
+}
+
+.layout-preview {
+    display: grid;
+    gap: 15px;
+    border: 2px dashed #ccc;
+    padding: 20px;
+    margin: 20px 0;
+    min-height: 400px;
+    background: white;
+}
+
+.layout-grid-2x2 { grid-template-columns: 1fr 1fr; }
+.layout-grid-1x3 { grid-template-columns: 1fr; }
+.layout-grid-3x1 { grid-template-columns: 1fr 1fr 1fr; }
+.layout-grid-2x3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+
+.chart-slot {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: #fafafa;
+    transition: all 0.3s ease;
+}
+
+.chart-slot:hover {
+    border-color: #007bff;
+}
+
+.chart-slot.has-image {
+    padding: 10px;
+}
+
+.chart-slot img {
+    max-width: calc(100% - 20px);
+    max-height: calc(100% - 60px);
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.chart-label {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    max-width: calc(100% - 20px);
+    text-align: center;
+    word-wrap: break-word;
+}
+
+.slot-controls {
+    margin-top: 10px;
+}
+
+.slot-controls select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.label-settings {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.label-settings label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.label-settings input, .label-settings select {
+    margin-left: 10px;
+}
+
+.controls {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.controls button {
+    padding: 12px 24px;
+    margin: 0 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#generateBtn {
+    background: #28a745;
+    color: white;
+}
+
+#generateBtn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+#downloadBtn {
+    background: #007bff;
+    color: white;
+}
+
+#downloadBtn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+#finalImagePreview {
+    text-align: center;
+    margin-top: 20px;
+}
+
+#finalCanvas {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-width: 100%;
+    height: auto;
+}
+
+.drag-over {
+    border-color: #007bff !important;
+    background-color: #e3f2fd !important;
+}
