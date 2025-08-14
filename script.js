@@ -227,21 +227,29 @@ function generateImage() {
     
     const ctx = canvas.getContext('2d');
     
-    // Get settings
+    // Get ALL settings from controls
     const quality = document.getElementById('qualitySelect')?.value || 'large';
     const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
+    const customSpacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    const customFontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
+    const backgroundType = document.getElementById('backgroundType')?.value || 'white';
     
-    let cellW, cellH, spacing;
+    let cellW, cellH;
     switch (quality) {
-        case 'small':  cellW = 400;  cellH = 300;  spacing = 20; break;
-        case 'medium': cellW = 800;  cellH = 600;  spacing = 25; break;
-        case 'large':  cellW = 1200; cellH = 900;  spacing = 30; break;
-        case 'xlarge': cellW = 1600; cellH = 1200; spacing = 40; break;
-        case 'ultra':  cellW = 2400; cellH = 1800; spacing = 50; break;
-        default:       cellW = 1200; cellH = 900;  spacing = 30;
+        case 'small':  cellW = 400;  cellH = 300; break;
+        case 'medium': cellW = 800;  cellH = 600; break;
+        case 'large':  cellW = 1200; cellH = 900; break;
+        case 'xlarge': cellW = 1600; cellH = 1200; break;
+        case 'ultra':  cellW = 2400; cellH = 1800; break;
+        default:       cellW = 1200; cellH = 900;
     }
     
+    // Use the ACTUAL spacing from slider
+    const spacing = customSpacing;
+    
     console.log(`📐 Using ${cellW}×${cellH} per cell (${quality} quality)`);
+    console.log(`📏 Spacing: ${spacing}px (from slider)`);
+    console.log(`📝 Font size: ${customFontSize}px (from slider)`);
     console.log(`🏷️ Label position: ${labelPosition}`);
     
     // Set canvas size
@@ -250,11 +258,17 @@ function generateImage() {
     
     console.log(`🖼️ Final canvas: ${canvas.width}×${canvas.height} pixels`);
     
-    // White background
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Set background
+    if (backgroundType !== 'transparent') {
+        let bgColor = 'white';
+        if (backgroundType === 'light') bgColor = '#f5f5f5';
+        if (backgroundType === 'custom') bgColor = document.getElementById('customBgColor')?.value || 'white';
+        
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     
-    // Draw each image
+    // Draw each image with ACTUAL settings
     Object.keys(slots).forEach(slotIndex => {
         const imageIndex = slots[slotIndex];
         const img = images[imageIndex];
@@ -265,7 +279,7 @@ function generateImage() {
         const x = spacing + (col * (cellW + spacing));
         const y = spacing + (row * (cellH + spacing));
         
-        drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition);
+        drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, customFontSize);
     });
     
     // Show result
@@ -282,12 +296,11 @@ function generateImage() {
     }, 100);
 }
 
-function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition) {
+function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, fontSize) {
     const padding = Math.max(20, cellW * 0.05);
-    const fontSize = Math.max(16, cellW * 0.04);
     const labelHeight = fontSize + 10;
     
-    console.log(`🖼️ Drawing ${img.name} at position (${x}, ${y}) with label: ${labelPosition}`);
+    console.log(`🖼️ Drawing ${img.name} with font size: ${fontSize}px`);
     
     // Calculate available space based on label position
     let imageX = x + padding;
@@ -297,12 +310,11 @@ function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition) {
     
     // Adjust for label space
     if (labelPosition === 'top') {
-        imageY += labelHeight + 10; // Move image down
-        availableHeight -= (labelHeight + 10); // Reduce available height
+        imageY += labelHeight + 10;
+        availableHeight -= (labelHeight + 10);
     } else if (labelPosition === 'bottom') {
-        availableHeight -= (labelHeight + 10); // Reduce available height
+        availableHeight -= (labelHeight + 10);
     }
-    // For 'overlay' and 'none', use full space
     
     // Calculate scaling to fit available space
     const scale = Math.min(
@@ -323,32 +335,30 @@ function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition) {
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img.img, centeredImageX, centeredImageY, scaledWidth, scaledHeight);
     
-    // Draw label based on position
+    // Draw label with ACTUAL font size
     if (labelPosition !== 'none') {
-        ctx.fillStyle = 'black';
-        ctx.font = `${fontSize}px Arial`;
+        ctx.font = `${fontSize}px Arial`; // Use actual font size
         ctx.textAlign = 'center';
         
-        const labelX = x + cellW / 2; // Center horizontally
+        const labelX = x + cellW / 2;
         let labelY;
         
         switch (labelPosition) {
             case 'top':
-                labelY = y + padding + fontSize; // At the top
-                console.log(`📝 Label "${img.name}" at top: y=${labelY}`);
+                ctx.fillStyle = 'black';
+                labelY = y + padding + fontSize;
                 break;
                 
             case 'bottom':
-                labelY = y + cellH - padding; // At the bottom
-                console.log(`📝 Label "${img.name}" at bottom: y=${labelY}`);
+                ctx.fillStyle = 'black';
+                labelY = y + cellH - padding;
                 break;
                 
             case 'overlay':
-                // Overlay at bottom of image with background
                 labelY = centeredImageY + scaledHeight - 15;
                 const textWidth = ctx.measureText(img.name).width;
                 
-                // Draw background rectangle
+                // Background
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
                 ctx.fillRect(
                     labelX - textWidth/2 - 10, 
@@ -357,18 +367,15 @@ function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition) {
                     fontSize + 10
                 );
                 
-                // Draw text in white
+                // Text
                 ctx.fillStyle = 'white';
-                console.log(`📝 Label "${img.name}" overlay: y=${labelY}`);
                 break;
         }
         
         ctx.fillText(img.name, labelX, labelY);
+        console.log(`📝 Drew label "${img.name}" with ${fontSize}px font`);
     }
-    
-    console.log(`✅ Drew ${img.name}: ${scaledWidth.toFixed(0)}×${scaledHeight.toFixed(0)} (scale: ${scale.toFixed(2)})`);
 }
-
 
 // Layout type functions (for HTML compatibility)
 function updateLayoutType() {
