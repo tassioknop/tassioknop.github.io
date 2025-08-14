@@ -3,27 +3,113 @@ let uploadedImages = [];
 let currentCols = 2;
 let currentRows = 2;
 let slotAssignments = {}; // slotIndex -> imageIndex
+let draggedImageIndex = null;
+let draggedFromSlot = null;
 
-console.log('Script loaded!'); // Debug
+console.log('Enhanced script loaded!');
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded!'); // Debug
+    console.log('DOM loaded!');
     
     const fileInput = document.getElementById('imageUpload');
     if (fileInput) {
         fileInput.addEventListener('change', handleImageUpload);
-        console.log('File input listener added!'); // Debug
-    } else {
-        console.error('File input not found!');
+        console.log('File input listener added!');
     }
     
     // Show debug section
     document.getElementById('debug').style.display = 'block';
+    
+    // Setup advanced controls
+    setupAdvancedControls();
 });
 
+function setupAdvancedControls() {
+    // Add advanced controls section after layout buttons
+    const layoutButtons = document.getElementById('layoutButtons');
+    const advancedControlsHTML = `
+        <div class="advanced-controls" id="advancedControls" style="display: none;">
+            <h3>🎨 Customization Options</h3>
+            <div class="control-row">
+                <label>
+                    📏 Spacing: 
+                    <input type="range" id="spacingSlider" min="5" max="50" value="20">
+                    <span id="spacingValue">20px</span>
+                </label>
+                <label>
+                    📝 Font Size: 
+                    <input type="range" id="fontSlider" min="12" max="32" value="16">
+                    <span id="fontValue">16px</span>
+                </label>
+            </div>
+            <div class="control-row">
+                <label>
+                    🎯 Label Position: 
+                    <select id="labelPosition">
+                        <option value="bottom">Bottom</option>
+                        <option value="top">Top</option>
+                        <option value="overlay">Overlay</option>
+                        <option value="none">No Labels</option>
+                    </select>
+                </label>
+                <label>
+                    🎨 Background: 
+                    <select id="backgroundType">
+                        <option value="white">White</option>
+                        <option value="transparent">Transparent</option>
+                        <option value="light">Light Gray</option>
+                        <option value="custom">Custom Color</option>
+                    </select>
+                    <input type="color" id="customBgColor" value="#ffffff" style="display: none;">
+                </label>
+            </div>
+        </div>
+        
+        <div class="instructions" id="instructions" style="display: none;">
+            <h3>📋 How to Use</h3>
+            <ul>
+                <li><strong>🖱️ Drag images</strong> from the list above directly onto the grid slots</li>
+                <li><strong>🔄 Drag between slots</strong> to reorder your layout</li>
+                <li><strong>🖱️ Right-click</strong> on any slot to remove an image</li>
+                <li><strong>✏️ Edit labels</strong> by clicking the text fields above</li>
+                <li><strong>⚙️ Customize</strong> spacing, fonts, and background with the controls above</li>
+            </ul>
+        </div>
+    `;
+    
+    layoutButtons.insertAdjacentHTML('afterend', advancedControlsHTML);
+    
+    // Setup event listeners for advanced controls
+    const spacingSlider = document.getElementById('spacingSlider');
+    const spacingValue = document.getElementById('spacingValue');
+    spacingSlider?.addEventListener('input', (e) => {
+        spacingValue.textContent = e.target.value + 'px';
+        updateLayoutSpacing(e.target.value);
+    });
+    
+    const fontSlider = document.getElementById('fontSlider');
+    const fontValue = document.getElementById('fontValue');
+    fontSlider?.addEventListener('input', (e) => {
+        fontValue.textContent = e.target.value + 'px';
+    });
+    
+    const backgroundType = document.getElementById('backgroundType');
+    const customBgColor = document.getElementById('customBgColor');
+    backgroundType?.addEventListener('change', (e) => {
+        customBgColor.style.display = e.target.value === 'custom' ? 'inline' : 'none';
+    });
+}
+
+function updateLayoutSpacing(spacing) {
+    const preview = document.getElementById('layoutPreview');
+    if (preview) {
+        preview.style.gap = spacing + 'px';
+    }
+}
+
 function handleImageUpload(event) {
-    console.log('File upload triggered!', event.target.files.length, 'files'); // Debug
+    console.log('File upload triggered!', event.target.files.length, 'files');
     
     const files = Array.from(event.target.files);
     document.getElementById('debugText').textContent = `Processing ${files.length} files...`;
@@ -31,7 +117,7 @@ function handleImageUpload(event) {
     let processedCount = 0;
     
     files.forEach((file, index) => {
-        console.log('Processing file:', file.name); // Debug
+        console.log('Processing file:', file.name);
         
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -48,15 +134,13 @@ function handleImageUpload(event) {
                 uploadedImages.push(imageData);
                 processedCount++;
                 
-                console.log('Image processed:', imageData.label); // Debug
+                console.log('Image processed:', imageData.label);
                 document.getElementById('debugText').textContent = 
                     `Processed ${processedCount}/${files.length} images`;
                 
-                // Update UI after each image is processed
                 updateUploadedImagesList();
                 showRelevantSections();
                 
-                // Auto-create layout after all images are processed
                 if (processedCount === files.length) {
                     autoSetLayout();
                 }
@@ -72,7 +156,7 @@ function updateUploadedImagesList() {
     const list = document.getElementById('uploadedImagesList');
     const count = document.getElementById('imageCount');
     
-    console.log('Updating images list, count:', uploadedImages.length); // Debug
+    console.log('Updating images list, count:', uploadedImages.length);
     
     if (uploadedImages.length === 0) {
         section.style.display = 'none';
@@ -80,52 +164,98 @@ function updateUploadedImagesList() {
     }
     
     section.style.display = 'block';
+    section.classList.add('fade-in');
     count.textContent = `(${uploadedImages.length} images)`;
     list.innerHTML = '';
     
     uploadedImages.forEach((img, index) => {
         const card = document.createElement('div');
         card.className = 'uploaded-image-card';
+        card.draggable = true;
+        card.dataset.imageIndex = index;
+        
         card.innerHTML = `
             <img src="${img.src}" alt="${img.label}">
             <div class="image-info">
                 <input type="text" 
                        value="${img.label}" 
-                       onchange="updateImageLabel(${index}, this.value)">
-                <small style="color: #666; display: block; margin-top: 5px;">
-                    ${img.originalName}
+                       onchange="updateImageLabel(${index}, this.value)"
+                       placeholder="Enter chart label...">
+                <small style="color: #666; display: block; margin-top: 8px;">
+                    📁 ${img.originalName}
                 </small>
             </div>
         `;
+        
+        setupImageDragAndDrop(card, index);
         list.appendChild(card);
     });
 }
 
+function setupImageDragAndDrop(card, imageIndex) {
+    card.addEventListener('dragstart', (e) => {
+        console.log('Drag started for image:', imageIndex);
+        draggedImageIndex = imageIndex;
+        draggedFromSlot = findSlotWithImage(imageIndex);
+        card.classList.add('dragging');
+        
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+    });
+    
+    card.addEventListener('dragend', (e) => {
+        card.classList.remove('dragging');
+        draggedImageIndex = null;
+        draggedFromSlot = null;
+    });
+}
+
+function findSlotWithImage(imageIndex) {
+    for (let slotIndex in slotAssignments) {
+        if (slotAssignments[slotIndex] === imageIndex) {
+            return parseInt(slotIndex);
+        }
+    }
+    return null;
+}
+
 function showRelevantSections() {
-    console.log('Showing sections...'); // Debug
+    console.log('Showing sections...');
     document.getElementById('layoutButtons').style.display = 'block';
+    document.getElementById('advancedControls').style.display = 'block';
+    document.getElementById('instructions').style.display = 'block';
     document.getElementById('controls').style.display = 'block';
+    
+    // Add fade-in animation
+    [document.getElementById('layoutButtons'), 
+     document.getElementById('advancedControls'),
+     document.getElementById('instructions'),
+     document.getElementById('controls')].forEach(el => {
+        if (el) el.classList.add('fade-in');
+    });
 }
 
 function autoSetLayout() {
-    console.log('Auto-setting layout for', uploadedImages.length, 'images'); // Debug
+    console.log('Auto-setting layout for', uploadedImages.length, 'images');
     
-    // Determine best layout
     const count = uploadedImages.length;
-    if (count <= 2) setLayout(2, 1);
+    if (count === 1) setLayout(1, 1);
+    else if (count === 2) setLayout(2, 1);
     else if (count <= 4) setLayout(2, 2);
     else if (count <= 6) setLayout(3, 2);
-    else setLayout(3, 3);
+    else if (count <= 9) setLayout(3, 3);
+    else if (count <= 12) setLayout(4, 3);
+    else setLayout(4, 4); // For very large numbers
 }
 
 function setLayout(cols, rows) {
-    console.log('Setting layout:', cols, 'x', rows); // Debug
+    console.log('Setting layout:', cols, 'x', rows);
     
     // Update active button
     document.querySelectorAll('#layoutButtons button').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (event && event.target) event.target.classList.add('active');
     
     currentCols = cols;
     currentRows = rows;
@@ -138,18 +268,26 @@ function createLayoutSlots() {
     const preview = document.getElementById('layoutPreview');
     const totalSlots = currentCols * currentRows;
     
-    console.log('Creating layout slots:', totalSlots); // Debug
+    console.log('Creating layout slots:', totalSlots);
     
     preview.innerHTML = '';
     preview.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
     preview.style.display = 'grid';
+    preview.classList.add('fade-in');
     
     for (let i = 0; i < totalSlots; i++) {
         const slot = document.createElement('div');
         slot.className = 'chart-slot';
         slot.dataset.slotIndex = i;
-        slot.innerHTML = `
-            <p>Slot ${i + 1}</p>
+        
+        // Add slot number
+        const slotNumber = document.createElement('div');
+        slotNumber.className = 'slot-number';
+        slotNumber.textContent = i + 1;
+        slot.appendChild(slotNumber);
+        
+        slot.innerHTML += `
+            <p>Drop image here</p>
             <select class="slot-select" onchange="assignImageToSlot(${i}, this.value)">
                 <option value="">Select image...</option>
                 ${uploadedImages.map((img, idx) => 
@@ -158,37 +296,116 @@ function createLayoutSlots() {
             </select>
         `;
         
+        setupSlotDragAndDrop(slot, i);
         preview.appendChild(slot);
     }
 }
 
-function autoAssignImages() {
-    console.log('Auto-assigning images...'); // Debug
+function setupSlotDragAndDrop(slot, slotIndex) {
+    slot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (draggedImageIndex !== null) {
+            slot.classList.add('drag-over');
+        }
+    });
     
-    // Clear existing assignments
-    slotAssignments = {};
+    slot.addEventListener('dragleave', (e) => {
+        slot.classList.remove('drag-over');
+    });
     
-    // Assign images to slots
-    uploadedImages.forEach((img, index) => {
-        if (index < currentCols * currentRows) {
-            slotAssignments[index] = index;
-            assignImageToSlot(index, index, false); // false = don't log
+    slot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        slot.classList.remove('drag-over');
+        
+        if (draggedImageIndex !== null) {
+            console.log('Dropping image', draggedImageIndex, 'onto slot', slotIndex);
+            
+            // Handle swapping if both slots have images
+            const currentImageInSlot = slotAssignments[slotIndex];
+            
+            if (draggedFromSlot !== null && currentImageInSlot !== undefined) {
+                // Swap images
+                slotAssignments[slotIndex] = draggedImageIndex;
+                slotAssignments[draggedFromSlot] = currentImageInSlot;
+            } else if (draggedFromSlot !== null) {
+                // Move image from one slot to empty slot
+                slotAssignments[slotIndex] = draggedImageIndex;
+                delete slotAssignments[draggedFromSlot];
+            } else {
+                // Assign new image to slot
+                slotAssignments[slotIndex] = draggedImageIndex;
+            }
+            
+            updateAllSlots();
+        }
+    });
+    
+    // Right-click to remove
+    slot.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (slotAssignments[slotIndex] !== undefined) {
+            delete slotAssignments[slotIndex];
+            updateSlotContent(slot, slotIndex);
         }
     });
 }
 
-function assignImageToSlot(slotIndex, imageIndex, shouldLog = true) {
-    if (shouldLog) console.log('Assigning image', imageIndex, 'to slot', slotIndex); // Debug
+// Continue with the rest of the functions (autoAssignImages, updateAllSlots, etc.)
+// ... (keeping all the existing functions from the working version)
+
+function autoAssignImages() {
+    console.log('Auto-assigning images...');
+    slotAssignments = {};
+    uploadedImages.forEach((img, index) => {
+        if (index < currentCols * currentRows) {
+            slotAssignments[index] = index;
+        }
+    });
+    updateAllSlots();
+}
+
+function updateAllSlots() {
+    const slots = document.querySelectorAll('.chart-slot');
+    slots.forEach((slot, index) => {
+        updateSlotContent(slot, index);
+    });
+}
+
+function updateSlotContent(slot, slotIndex) {
+    const imageIndex = slotAssignments[slotIndex];
+    const slotNumber = slot.querySelector('.slot-number');
     
-    const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
-    const select = slot.querySelector('select');
+    slot.innerHTML = '';
+    slot.appendChild(slotNumber);
     
-    if (imageIndex === '' || imageIndex === null) {
-        // Clear slot
-        delete slotAssignments[slotIndex];
+    if (imageIndex !== undefined && uploadedImages[imageIndex]) {
+        const img = uploadedImages[imageIndex];
+        slot.className = 'chart-slot has-image';
+        
+        const imgElement = document.createElement('img');
+        imgElement.src = img.src;
+        imgElement.alt = img.label;
+        slot.appendChild(imgElement);
+        
+        const label = document.createElement('div');
+        label.className = 'chart-label';
+        label.textContent = img.label;
+        slot.appendChild(label);
+        
+        const select = document.createElement('select');
+        select.className = 'slot-select';
+        select.innerHTML = `
+            <option value="">Remove image</option>
+            ${uploadedImages.map((img, idx) => 
+                `<option value="${idx}" ${idx == imageIndex ? 'selected' : ''}>${img.label}</option>`
+            ).join('')}
+        `;
+        select.onchange = (e) => assignImageToSlot(slotIndex, e.target.value);
+        slot.appendChild(select);
+    } else {
         slot.className = 'chart-slot';
-        slot.innerHTML = `
-            <p>Slot ${parseInt(slotIndex) + 1}</p>
+        slot.innerHTML += `
+            <p>Drop image here</p>
             <select class="slot-select" onchange="assignImageToSlot(${slotIndex}, this.value)">
                 <option value="">Select image...</option>
                 ${uploadedImages.map((img, idx) => 
@@ -196,60 +413,51 @@ function assignImageToSlot(slotIndex, imageIndex, shouldLog = true) {
                 ).join('')}
             </select>
         `;
-    } else {
-        // Assign image
-        const img = uploadedImages[imageIndex];
-        slotAssignments[slotIndex] = parseInt(imageIndex);
-        
-        slot.className = 'chart-slot has-image';
-        slot.innerHTML = `
-            <img src="${img.src}" alt="${img.label}">
-            <div class="chart-label">${img.label}</div>
-            <select class="slot-select" onchange="assignImageToSlot(${slotIndex}, this.value)">
-                <option value="">Remove image</option>
-                ${uploadedImages.map((img, idx) => 
-                    `<option value="${idx}" ${idx == imageIndex ? 'selected' : ''}>${img.label}</option>`
-                ).join('')}
-            </select>
-        `;
     }
 }
 
+// Keep all the other existing functions (assignImageToSlot, updateImageLabel, generateImage, etc.)
+function assignImageToSlot(slotIndex, imageIndex, shouldLog = true) {
+    if (shouldLog) console.log('Assigning image', imageIndex, 'to slot', slotIndex);
+    
+    const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+    
+    if (imageIndex === '' || imageIndex === null) {
+        delete slotAssignments[slotIndex];
+    } else {
+        slotAssignments[slotIndex] = parseInt(imageIndex);
+    }
+    
+    updateSlotContent(slot, slotIndex);
+}
+
 function updateImageLabel(imageIndex, newLabel) {
-    console.log('Updating label for image', imageIndex, 'to:', newLabel); // Debug
+    console.log('Updating label for image', imageIndex, 'to:', newLabel);
     uploadedImages[imageIndex].label = newLabel;
-    
-    // Update any slots showing this image
-    Object.keys(slotAssignments).forEach(slotIndex => {
-        if (slotAssignments[slotIndex] === imageIndex) {
-            assignImageToSlot(slotIndex, imageIndex, false);
-        }
-    });
-    
-    // Update all select options
-    createLayoutSlots();
-    Object.keys(slotAssignments).forEach(slotIndex => {
-        assignImageToSlot(slotIndex, slotAssignments[slotIndex], false);
-    });
+    updateAllSlots();
 }
 
 function generateImage() {
-    console.log('Generating final image...'); // Debug
+    console.log('Generating final image...');
     
     const canvas = document.getElementById('finalCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Set canvas size
+    // Get settings
+    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    const fontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
+    const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
+    const backgroundType = document.getElementById('backgroundType')?.value || 'white';
+    
+    // Calculate canvas size
     const cellWidth = 400;
     const cellHeight = 300;
-    const spacing = 20;
     
     canvas.width = (cellWidth * currentCols) + (spacing * (currentCols + 1));
     canvas.height = (cellHeight * currentRows) + (spacing * (currentRows + 1));
     
-    // White background
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Set background
+    setCanvasBackground(ctx, canvas.width, canvas.height, backgroundType);
     
     // Draw each assigned image
     Object.keys(slotAssignments).forEach(slotIndex => {
@@ -263,23 +471,54 @@ function generateImage() {
             const x = spacing + (col * (cellWidth + spacing));
             const y = spacing + (row * (cellHeight + spacing));
             
-            drawImageInCell(ctx, img, x, y, cellWidth, cellHeight);
+            drawImageInCell(ctx, img, x, y, cellWidth, cellHeight, fontSize, labelPosition);
         }
     });
     
     // Show result
     document.getElementById('finalImagePreview').style.display = 'block';
+    document.getElementById('finalImagePreview').classList.add('fade-in');
     document.getElementById('downloadBtn').disabled = false;
     
-    console.log('Image generated!'); // Debug
+    console.log('Image generated!');
+    
+    // Scroll to preview
+    setTimeout(() => {
+        document.getElementById('finalImagePreview').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+    }, 100);
 }
 
-function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight) {
-    const padding = 20;
-    const labelHeight = 30;
+function setCanvasBackground(ctx, width, height, backgroundType) {
+    if (backgroundType === 'transparent') return;
     
-    const availableWidth = cellWidth - (padding * 2);
-    const availableHeight = cellHeight - (padding * 2) - labelHeight;
+    let bgColor = 'white';
+    switch (backgroundType) {
+        case 'light': bgColor = '#f5f5f5'; break;
+        case 'custom': bgColor = document.getElementById('customBgColor')?.value || 'white'; break;
+    }
+    
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, width, height);
+}
+
+function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight, fontSize, labelPosition) {
+    const padding = 20;
+    const labelHeight = labelPosition === 'none' ? 0 : fontSize + 15;
+    
+    let availableWidth = cellWidth - (padding * 2);
+    let availableHeight = cellHeight - (padding * 2);
+    let imageY = y + padding;
+    
+    // Adjust for label position
+    if (labelPosition === 'top' || labelPosition === 'bottom') {
+        availableHeight -= labelHeight;
+        if (labelPosition === 'top') {
+            imageY += labelHeight;
+        }
+    }
     
     // Calculate scaling
     const scale = Math.min(
@@ -292,24 +531,47 @@ function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight) {
     
     // Center the image
     const imageX = x + padding + (availableWidth - scaledWidth) / 2;
-    const imageY = y + padding + (availableHeight - scaledHeight) / 2;
+    const centeredImageY = imageY + (availableHeight - scaledHeight) / 2;
     
     // Draw image
-    ctx.drawImage(imgData.image, imageX, imageY, scaledWidth, scaledHeight);
+    ctx.drawImage(imgData.image, imageX, centeredImageY, scaledWidth, scaledHeight);
     
     // Draw label
-    ctx.fillStyle = 'black';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(imgData.label, x + cellWidth / 2, y + cellHeight - 10);
+    if (labelPosition !== 'none') {
+        ctx.fillStyle = 'black';
+        ctx.font = `${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        
+        const labelX = x + cellWidth / 2;
+        let labelY;
+        
+        switch (labelPosition) {
+            case 'top':
+                labelY = y + padding + fontSize;
+                break;
+            case 'bottom':
+                labelY = y + cellHeight - padding/2;
+                break;
+            case 'overlay':
+                labelY = centeredImageY + scaledHeight - 10;
+                // Add background for overlay
+                const textWidth = ctx.measureText(imgData.label).width;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.fillRect(labelX - textWidth/2 - 8, labelY - fontSize - 4, textWidth + 16, fontSize + 8);
+                ctx.fillStyle = 'black';
+                break;
+        }
+        
+        ctx.fillText(imgData.label, labelX, labelY);
+    }
 }
 
 function downloadImage() {
-    console.log('Downloading image...'); // Debug
+    console.log('Downloading image...');
     
     const canvas = document.getElementById('finalCanvas');
     const link = document.createElement('a');
-    link.download = `chart-layout-${currentCols}x${currentRows}.png`;
+    link.download = `chart-layout-${currentCols}x${currentRows}-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
 }
