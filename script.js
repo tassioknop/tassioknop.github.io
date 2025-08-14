@@ -227,8 +227,9 @@ function generateImage() {
     
     const ctx = canvas.getContext('2d');
     
-    // Get quality setting
+    // Get settings
     const quality = document.getElementById('qualitySelect')?.value || 'large';
+    const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
     
     let cellW, cellH, spacing;
     switch (quality) {
@@ -241,6 +242,7 @@ function generateImage() {
     }
     
     console.log(`📐 Using ${cellW}×${cellH} per cell (${quality} quality)`);
+    console.log(`🏷️ Label position: ${labelPosition}`);
     
     // Set canvas size
     canvas.width = (cellW * currentCols) + (spacing * (currentCols + 1));
@@ -263,33 +265,7 @@ function generateImage() {
         const x = spacing + (col * (cellW + spacing));
         const y = spacing + (row * (cellH + spacing));
         
-        // Draw image with better scaling
-        const padding = Math.max(20, cellW * 0.05); // Responsive padding
-        const fontSize = Math.max(16, cellW * 0.04); // Responsive font
-        const labelH = fontSize + 20;
-        const availW = cellW - (padding * 2);
-        const availH = cellH - (padding * 2) - labelH;
-        
-        // Calculate scale - this preserves original quality when possible
-        const scale = Math.min(availW / img.img.width, availH / img.img.height, 1); // Max scale = 1 (no upscaling)
-        const scaledW = img.img.width * scale;
-        const scaledH = img.img.height * scale;
-        
-        const imgX = x + padding + (availW - scaledW) / 2;
-        const imgY = y + padding + (availH - scaledH) / 2;
-        
-        // Use high-quality rendering
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img.img, imgX, imgY, scaledW, scaledH);
-        
-        // Draw label with responsive font
-        ctx.fillStyle = 'black';
-        ctx.font = `${fontSize}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.fillText(img.name, x + cellW / 2, y + cellH - padding/2);
-        
-        console.log(`✅ Drew ${img.name}: ${scaledW.toFixed(0)}×${scaledH.toFixed(0)} (scale: ${scale.toFixed(2)})`);
+        drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition);
     });
     
     // Show result
@@ -306,26 +282,93 @@ function generateImage() {
     }, 100);
 }
 
-function downloadImage(format = 'png') {
-    console.log('💾 Downloading image as:', format);
+function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition) {
+    const padding = Math.max(20, cellW * 0.05);
+    const fontSize = Math.max(16, cellW * 0.04);
+    const labelHeight = fontSize + 10;
     
-    const canvas = document.getElementById('finalCanvas');
-    if (!canvas) return;
+    console.log(`🖼️ Drawing ${img.name} at position (${x}, ${y}) with label: ${labelPosition}`);
     
-    const link = document.createElement('a');
-    const quality = 0.95;
+    // Calculate available space based on label position
+    let imageX = x + padding;
+    let imageY = y + padding;
+    let availableWidth = cellW - (padding * 2);
+    let availableHeight = cellH - (padding * 2);
     
-    if (format === 'jpg') {
-        link.href = canvas.toDataURL('image/jpeg', quality);
-        link.download = `chart-layout-${currentCols}x${currentRows}-${Date.now()}.jpg`;
-    } else {
-        link.href = canvas.toDataURL('image/png');
-        link.download = `chart-layout-${currentCols}x${currentRows}-${Date.now()}.png`;
+    // Adjust for label space
+    if (labelPosition === 'top') {
+        imageY += labelHeight + 10; // Move image down
+        availableHeight -= (labelHeight + 10); // Reduce available height
+    } else if (labelPosition === 'bottom') {
+        availableHeight -= (labelHeight + 10); // Reduce available height
+    }
+    // For 'overlay' and 'none', use full space
+    
+    // Calculate scaling to fit available space
+    const scale = Math.min(
+        availableWidth / img.img.width,
+        availableHeight / img.img.height,
+        1 // Never upscale
+    );
+    
+    const scaledWidth = img.img.width * scale;
+    const scaledHeight = img.img.height * scale;
+    
+    // Center the image in available space
+    const centeredImageX = imageX + (availableWidth - scaledWidth) / 2;
+    const centeredImageY = imageY + (availableHeight - scaledHeight) / 2;
+    
+    // Draw the image
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img.img, centeredImageX, centeredImageY, scaledWidth, scaledHeight);
+    
+    // Draw label based on position
+    if (labelPosition !== 'none') {
+        ctx.fillStyle = 'black';
+        ctx.font = `${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        
+        const labelX = x + cellW / 2; // Center horizontally
+        let labelY;
+        
+        switch (labelPosition) {
+            case 'top':
+                labelY = y + padding + fontSize; // At the top
+                console.log(`📝 Label "${img.name}" at top: y=${labelY}`);
+                break;
+                
+            case 'bottom':
+                labelY = y + cellH - padding; // At the bottom
+                console.log(`📝 Label "${img.name}" at bottom: y=${labelY}`);
+                break;
+                
+            case 'overlay':
+                // Overlay at bottom of image with background
+                labelY = centeredImageY + scaledHeight - 15;
+                const textWidth = ctx.measureText(img.name).width;
+                
+                // Draw background rectangle
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(
+                    labelX - textWidth/2 - 10, 
+                    labelY - fontSize - 5, 
+                    textWidth + 20, 
+                    fontSize + 10
+                );
+                
+                // Draw text in white
+                ctx.fillStyle = 'white';
+                console.log(`📝 Label "${img.name}" overlay: y=${labelY}`);
+                break;
+        }
+        
+        ctx.fillText(img.name, labelX, labelY);
     }
     
-    link.click();
-    console.log('✅ Download triggered!');
+    console.log(`✅ Drew ${img.name}: ${scaledWidth.toFixed(0)}×${scaledHeight.toFixed(0)} (scale: ${scale.toFixed(2)})`);
 }
+
 
 // Layout type functions (for HTML compatibility)
 function updateLayoutType() {
