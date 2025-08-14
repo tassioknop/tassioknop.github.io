@@ -1,14 +1,12 @@
 class ChartLayoutTool {
     constructor() {
         this.uploadedImages = [];
-        this.currentLayout = '2x2';
-        this.layouts = {
-            '2x2': { rows: 2, cols: 2, slots: 4 },
-            '1x3': { rows: 3, cols: 1, slots: 3 },
-            '3x1': { rows: 1, cols: 3, slots: 3 },
-            '2x3': { rows: 3, cols: 2, slots: 6 }
-        };
-        this.slotAssignments = {}; // Track which image is in which slot
+        this.currentLayout = 'auto';
+        this.gridCols = 3;
+        this.gridRows = 2;
+        this.slotAssignments = {}; // slotIndex -> imageIndex
+        this.draggedElement = null;
+        this.draggedImageIndex = null;
         
         this.init();
     }
@@ -17,6 +15,14 @@ class ChartLayoutTool {
         document.getElementById('imageUpload').addEventListener('change', 
             (e) => this.handleImageUpload(e));
         
+        // Settings event listeners
+        this.setupSettingsListeners();
+        
+        // Initialize layout
+        this.updateLayout();
+    }
+    
+    setupSettingsListeners() {
         // Font size slider
         const fontSlider = document.getElementById('labelFontSize');
         const fontValue = document.getElementById('fontSizeValue');
@@ -24,7 +30,20 @@ class ChartLayoutTool {
             fontValue.textContent = e.target.value + 'px';
         });
         
-        this.createLayoutSlots();
+        // Spacing slider
+        const spacingSlider = document.getElementById('gridSpacing');
+        const spacingValue = document.getElementById('spacingValue');
+        spacingSlider.addEventListener('input', (e) => {
+            spacingValue.textContent = e.target.value + 'px';
+            document.documentElement.style.setProperty('--grid-spacing', e.target.value + 'px');
+        });
+        
+        // Background color
+        const bgSelect = document.getElementById('backgroundColor');
+        const customBgColor = document.getElementById('customBgColor');
+        bgSelect.addEventListener('change', (e) => {
+            customBgColor.style.display = e.target.value === 'custom' ? 'inline' : 'none';
+        });
     }
     
     handleImageUpload(event) {
@@ -39,14 +58,14 @@ class ChartLayoutTool {
                         id: Date.now() + index,
                         src: e.target.result,
                         image: img,
-                        label: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
+                        label: file.name.replace(/\.[^/.]+$/, ""),
                         originalName: file.name
                     };
                     
                     this.uploadedImages.push(imageData);
                     this.updateUploadedImagesList();
-                    this.updateSlotOptions();
-                    this.updateControls();
+                    this.updateLayout();
+                    this.showRelevantSections();
                 };
                 img.src = e.target.result;
             };
@@ -57,6 +76,7 @@ class ChartLayoutTool {
     updateUploadedImagesList() {
         const section = document.getElementById('uploadedImagesSection');
         const list = document.getElementById('uploadedImagesList');
+        const count = document.getElementById('imageCount');
         
         if (this.uploadedImages.length === 0) {
             section.style.display = 'none';
@@ -64,11 +84,15 @@ class ChartLayoutTool {
         }
         
         section.style.display = 'block';
+        count.textContent = `(${this.uploadedImages.length} images)`;
         list.innerHTML = '';
         
         this.uploadedImages.forEach((img, index) => {
             const card = document.createElement('div');
             card.className = 'uploaded-image-card';
+            card.draggable = true;
+            card.dataset.imageIndex = index;
+            
             card.innerHTML = `
                 <img src="${img.src}" alt="${img.label}">
                 <div class="image-info">
@@ -81,108 +105,233 @@ class ChartLayoutTool {
                     </small>
                 </div>
             `;
+            
+            this.setupDragAndDrop(card, index);
             list.appendChild(card);
         });
     }
     
-    createLayoutSlots() {
-        const preview = document.getElementById('layoutPreview');
-        const layout = this.layouts[this.currentLayout];
-        
-        preview.innerHTML = '';
-        preview.className = `layout-preview layout-grid-${this.currentLayout}`;
-        
-        for (let i = 0; i < layout.slots; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'chart-slot';
-            slot.dataset.slotIndex = i;
+    setupDragAndDrop(card, imageIndex) {
+        card.addEventListener('dragstart', (e) => {
+            this.draggedElement = card;
+            this.draggedImageIndex = imageIndex;
+            card.classList.add('dragging');
             
-            this.createEmptySlot(slot, i);
-            preview.appendChild(slot);
-        }
+            // Set drag image
+            e.dataTransfer.setData('text/plain', '');
+            e.dataTransfer.effectAllowed = 'move';
+        });
         
-        this.updateSlotOptions();
-    }
-    
-    createEmptySlot(slot, index) {
-        slot.innerHTML = `
-            <div class="slot-content">
-                <p>Chart ${index + 1}</p>
-                <div class="slot-controls">
-                    <select onchange="assignImageToSlot(${index}, this.value)">
-                        <option value="">Select image...</option>
-                    </select>
-                </div>
-            </div>
-        `;
-    }
-    
-    updateSlotOptions() {
-        const selects = document.querySelectorAll('.chart-slot select');
-        selects.forEach(select => {
-            const currentValue = select.value;
-            select.innerHTML = '<option value="">Select image...</option>';
-            
-            this.uploadedImages.forEach((img, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = `${img.label} (${img.originalName})`;
-                if (currentValue == index) option.selected = true;
-                select.appendChild(option);
-            });
+        card.addEventListener('dragend', (e) => {
+            card.classList.remove('dragging');
+            this.draggedElement = null;
+            this.draggedImageIndex = null;
         });
     }
     
-    assignImageToSlot(slotIndex, imageIndex) {
-        const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+    calculateOptimalGrid(imageCount) {
+        if (imageCount <= 1) return { cols: 1, rows: 1 };
+        if (imageCount <= 2) return { cols: 2, rows: 1 };
+        if (imageCount <= 4) return { cols: 2, rows: 2 };
+        if (imageCount <= 6) return { cols: 3, rows: 2 };
+        if (imageCount <= 9) return { cols: 3, rows: 3 };
+        if (imageCount <= 12) return { cols: 4, rows: 3 };
         
-        if (imageIndex === '') {
-            this.createEmptySlot(slot, slotIndex);
-            delete this.slotAssignments[slotIndex];
-        } else {
-            const img = this.uploadedImages[imageIndex];
-            this.slotAssignments[slotIndex] = imageIndex;
-            
-            slot.className = 'chart-slot has-image';
-            slot.innerHTML = `
-                <img src="${img.src}" alt="${img.label}">
-                <div class="chart-label">${img.label}</div>
-                <div class="slot-controls">
-                    <select onchange="assignImageToSlot(${slotIndex}, this.value)">
-                        <option value="">Remove image</option>
-                        ${this.uploadedImages.map((img, idx) => 
-                            `<option value="${idx}" ${idx == imageIndex ? 'selected' : ''}>${img.label}</option>`
-                        ).join('')}
-                    </select>
-                </div>
-            `;
-        }
-        
-        this.updateControls();
+        // For larger numbers, try to keep it roughly square
+        const cols = Math.ceil(Math.sqrt(imageCount));
+        const rows = Math.ceil(imageCount / cols);
+        return { cols, rows };
     }
     
-    updateControls() {
-        const hasImages = this.uploadedImages.length > 0;
-        const hasAssignments = Object.keys(this.slotAssignments).length > 0;
+    updateLayout() {
+        if (this.uploadedImages.length === 0) return;
         
-        document.getElementById('generateBtn').disabled = !hasAssignments;
+        // Determine grid dimensions
+        if (this.currentLayout === 'auto') {
+            const optimal = this.calculateOptimalGrid(this.uploadedImages.length);
+            this.gridCols = optimal.cols;
+            this.gridRows = optimal.rows;
+        }
+        
+        this.createLayoutSlots();
+        this.updateAutoLayoutInfo();
+    }
+    
+    updateAutoLayoutInfo() {
+        const info = document.getElementById('autoLayoutDetails');
+        if (this.currentLayout === 'auto' && info) {
+            const totalSlots = this.gridCols * this.gridRows;
+            info.textContent = `${this.gridCols}×${this.gridRows} grid (${totalSlots} slots) for ${this.uploadedImages.length} images`;
+        }
+    }
+    
+    createLayoutSlots() {
+        const preview = document.getElementById('layoutPreview');
+        const totalSlots = this.gridCols * this.gridRows;
+        
+        preview.innerHTML = '';
+        preview.style.gridTemplateColumns = `repeat(${this.gridCols}, 1fr)`;
+        preview.style.display = 'grid';
+        
+        for (let i = 0; i < totalSlots; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'chart-slot empty';
+            slot.dataset.slotIndex = i;
+            
+            // Add slot number
+            const slotNumber = document.createElement('div');
+            slotNumber.className = 'slot-number';
+            slotNumber.textContent = i + 1;
+            slot.appendChild(slotNumber);
+            
+            this.createEmptySlot(slot, i);
+            this.setupSlotDropZone(slot, i);
+            preview.appendChild(slot);
+        }
+        
+        // Auto-assign images to slots if in auto mode
+        if (this.currentLayout === 'auto') {
+            this.autoAssignImages();
+        }
+    }
+    
+    createEmptySlot(slot, index) {
+        const existingContent = slot.querySelector('.empty-slot-content');
+        if (existingContent) return;
+        
+        const content = document.createElement('div');
+        content.className = 'empty-slot-content';
+        content.innerHTML = `<p>Drop image here</p>`;
+        slot.appendChild(content);
+    }
+    
+    setupSlotDropZone(slot, slotIndex) {
+        slot.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (this.draggedImageIndex !== null) {
+                slot.classList.add('drag-over');
+            }
+        });
+        
+        slot.addEventListener('dragleave', (e) => {
+            slot.classList.remove('drag-over');
+        });
+        
+        slot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            slot.classList.remove('drag-over');
+            
+            if (this.draggedImageIndex !== null) {
+                // Check if dragging from another slot
+                const sourceSlot = this.findSlotWithImage(this.draggedImageIndex);
+                if (sourceSlot !== null && sourceSlot !== slotIndex) {
+                    // Swap images
+                    const targetImageIndex = this.slotAssignments[slotIndex];
+                    this.slotAssignments[slotIndex] = this.draggedImageIndex;
+                    if (targetImageIndex !== undefined) {
+                        this.slotAssignments[sourceSlot] = targetImageIndex;
+                    } else {
+                        delete this.slotAssignments[sourceSlot];
+                    }
+                } else {
+                    // Assign image to slot
+                    this.slotAssignments[slotIndex] = this.draggedImageIndex;
+                }
+                
+                this.updateAllSlots();
+            }
+        });
+        
+        // Right-click to remove
+        slot.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (this.slotAssignments[slotIndex] !== undefined) {
+                delete this.slotAssignments[slotIndex];
+                this.updateSlotContent(slot, slotIndex);
+            }
+        });
+    }
+    
+    findSlotWithImage(imageIndex) {
+        for (let slotIndex in this.slotAssignments) {
+            if (this.slotAssignments[slotIndex] === imageIndex) {
+                return parseInt(slotIndex);
+            }
+        }
+        return null;
+    }
+    
+    autoAssignImages() {
+        // Clear existing assignments
+        this.slotAssignments = {};
+        
+        // Assign images to slots in order
+        this.uploadedImages.forEach((img, index) => {
+            if (index < this.gridCols * this.gridRows) {
+                this.slotAssignments[index] = index;
+            }
+        });
+        
+        this.updateAllSlots();
+    }
+    
+    updateAllSlots() {
+        const slots = document.querySelectorAll('.chart-slot');
+        slots.forEach((slot, index) => {
+            this.updateSlotContent(slot, index);
+        });
+    }
+    
+    updateSlotContent(slot, slotIndex) {
+        const imageIndex = this.slotAssignments[slotIndex];
+        
+        // Clear existing content (except slot number)
+        const slotNumber = slot.querySelector('.slot-number');
+        slot.innerHTML = '';
+        slot.appendChild(slotNumber);
+        
+        if (imageIndex !== undefined && this.uploadedImages[imageIndex]) {
+            const img = this.uploadedImages[imageIndex];
+            slot.className = 'chart-slot has-image';
+            
+            const imgElement = document.createElement('img');
+            imgElement.src = img.src;
+            imgElement.alt = img.label;
+            slot.appendChild(imgElement);
+            
+            const label = document.createElement('div');
+            label.className = 'chart-label';
+            label.textContent = img.label;
+            slot.appendChild(label);
+            
+        } else {
+            slot.className = 'chart-slot empty';
+            this.createEmptySlot(slot, slotIndex);
+        }
+    }
+    
+    showRelevantSections() {
+        document.getElementById('layoutConfig').style.display = 'block';
+        document.getElementById('dragInstructions').style.display = 'block';
+        document.getElementById('layoutPreview').style.display = 'grid';
+        document.getElementById('labelSettings').style.display = 'block';
+        document.getElementById('controls').style.display = 'block';
     }
     
     generateFinalImage() {
         const canvas = document.getElementById('finalCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Set high resolution canvas
-        canvas.width = 1200;
-        canvas.height = 800;
+        // Calculate canvas size based on grid
+        const cellWidth = 400;
+        const cellHeight = 300;
+        const spacing = parseInt(document.getElementById('gridSpacing').value);
         
-        const layout = this.layouts[this.currentLayout];
-        const cellWidth = canvas.width / layout.cols;
-        const cellHeight = canvas.height / layout.rows;
+        canvas.width = (cellWidth * this.gridCols) + (spacing * (this.gridCols + 1));
+        canvas.height = (cellHeight * this.gridRows) + (spacing * (this.gridRows + 1));
         
-        // Clear canvas with white background
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Set background
+        this.setCanvasBackground(ctx, canvas.width, canvas.height);
         
         // Get label settings
         const fontSize = document.getElementById('labelFontSize').value;
@@ -193,13 +342,15 @@ class ChartLayoutTool {
             const imageIndex = this.slotAssignments[slotIndex];
             const img = this.uploadedImages[imageIndex];
             
-            const row = Math.floor(slotIndex / layout.cols);
-            const col = slotIndex % layout.cols;
-            
-            const x = col * cellWidth;
-            const y = row * cellHeight;
-            
-            this.drawImageWithLabel(ctx, img, x, y, cellWidth, cellHeight, fontSize, labelPosition);
+            if (img) {
+                const row = Math.floor(slotIndex / this.gridCols);
+                const col = slotIndex % this.gridCols;
+                
+                const x = spacing + (col * (cellWidth + spacing));
+                const y = spacing + (row * (cellHeight + spacing));
+                
+                this.drawImageWithLabel(ctx, img, x, y, cellWidth, cellHeight, fontSize, labelPosition);
+            }
         });
         
         // Show preview
@@ -210,9 +361,29 @@ class ChartLayoutTool {
         document.getElementById('finalImagePreview').scrollIntoView({ behavior: 'smooth' });
     }
     
+    setCanvasBackground(ctx, width, height) {
+        const bgType = document.getElementById('backgroundColor').value;
+        
+        if (bgType !== 'transparent') {
+            let bgColor = 'white';
+            
+            switch (bgType) {
+                case 'light-gray':
+                    bgColor = '#f5f5f5';
+                    break;
+                case 'custom':
+                    bgColor = document.getElementById('customBgColor').value;
+                    break;
+            }
+            
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, width, height);
+        }
+    }
+    
     drawImageWithLabel(ctx, imgData, x, y, cellWidth, cellHeight, fontSize, labelPosition) {
-        const padding = 20;
-        const labelHeight = parseInt(fontSize) + 10;
+        const padding = 15;
+        const labelHeight = labelPosition === 'none' ? 0 : parseInt(fontSize) + 10;
         
         let availableWidth = cellWidth - (padding * 2);
         let availableHeight = cellHeight - (padding * 2);
@@ -249,6 +420,12 @@ class ChartLayoutTool {
         );
         
         // Draw the label
+        if (labelPosition !== 'none') {
+            this.drawLabel(ctx, imgData.label, x, y, cellWidth, cellHeight, imageX, centeredImageY, scaledWidth, scaledHeight, fontSize, labelPosition);
+        }
+    }
+    
+    drawLabel(ctx, label, x, y, cellWidth, cellHeight, imageX, imageY, imageWidth, imageHeight, fontSize, position) {
         ctx.fillStyle = 'black';
         ctx.font = `${fontSize}px Arial`;
         ctx.textAlign = 'center';
@@ -256,71 +433,108 @@ class ChartLayoutTool {
         const labelX = x + cellWidth / 2;
         let labelY;
         
-        switch (labelPosition) {
+        switch (position) {
             case 'top':
-                labelY = y + padding + parseInt(fontSize);
+                labelY = y + 15 + parseInt(fontSize);
                 break;
             case 'bottom':
-                labelY = y + cellHeight - padding;
+                labelY = y + cellHeight - 10;
                 break;
             case 'overlay-top':
-                labelY = centeredImageY + parseInt(fontSize);
-                ctx.fillStyle = 'white';
-                ctx.fillRect(labelX - 100, labelY - parseInt(fontSize), 200, parseInt(fontSize) + 5);
-                ctx.fillStyle = 'black';
+                labelY = imageY + parseInt(fontSize) + 5;
+                this.drawLabelBackground(ctx, labelX, labelY - parseInt(fontSize), label, fontSize);
                 break;
             case 'overlay-bottom':
-                labelY = centeredImageY + scaledHeight - 5;
-                ctx.fillStyle = 'white';
-                ctx.fillRect(labelX - 100, labelY - parseInt(fontSize), 200, parseInt(fontSize) + 5);
-                ctx.fillStyle = 'black';
+                labelY = imageY + imageHeight - 5;
+                this.drawLabelBackground(ctx, labelX, labelY - parseInt(fontSize), label, fontSize);
                 break;
         }
         
-        ctx.fillText(imgData.label, labelX, labelY);
+        ctx.fillText(label, labelX, labelY);
+    }
+    
+    drawLabelBackground(ctx, centerX, topY, text, fontSize) {
+        ctx.font = `${fontSize}px Arial`;
+        const textWidth = ctx.measureText(text).width;
+        const padding = 6;
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(
+            centerX - textWidth/2 - padding,
+            topY - padding,
+            textWidth + padding * 2,
+            parseInt(fontSize) + padding * 2
+        );
+        
+        ctx.fillStyle = 'black';
     }
     
     downloadImage() {
         const canvas = document.getElementById('finalCanvas');
         const link = document.createElement('a');
-        link.download = 'chart-layout.png';
+        link.download = `chart-layout-${this.gridCols}x${this.gridRows}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
+    }
+    
+    clearLayout() {
+        this.slotAssignments = {};
+        this.updateAllSlots();
     }
 }
 
 // Global functions
 let chartTool;
 
-function setLayout(layoutType) {
-    // Update active button
-    document.querySelectorAll('.layout-selection button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.classList.add('active');
+function updateLayoutType() {
+    const layoutType = document.querySelector('input[name="layoutType"]:checked').value;
+    
+    // Show/hide relevant sections
+    document.getElementById('autoLayoutInfo').style.display = layoutType === 'auto' ? 'block' : 'none';
+    document.getElementById('presetLayouts').style.display = layoutType === 'preset' ? 'block' : 'none';
+    document.getElementById('customGrid').style.display = layoutType === 'custom' ? 'block' : 'none';
     
     chartTool.currentLayout = layoutType;
-    chartTool.slotAssignments = {}; // Clear assignments when layout changes
+    
+    if (layoutType === 'auto') {
+        chartTool.updateLayout();
+    } else if (layoutType === 'custom') {
+        updateCustomLayout();
+    }
+}
+
+function setLayout(layoutString) {
+    // Remove active class from all buttons
+    document.querySelectorAll('#presetLayouts button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    // Add active class to clicked button
+    event.target.classList.add('active');
+    
+    const [cols, rows] = layoutString.split('x').map(Number);
+    chartTool.currentLayout = 'preset';
+    chartTool.gridCols = cols;
+    chartTool.gridRows = rows;
     chartTool.createLayoutSlots();
 }
 
-function assignImageToSlot(slotIndex, imageIndex) {
-    chartTool.assignImageToSlot(slotIndex, imageIndex);
+function updateCustomLayout() {
+    const cols = parseInt(document.getElementById('customCols').value);
+    const rows = parseInt(document.getElementById('customRows').value);
+    const totalSlots = cols * rows;
+    
+    document.getElementById('customLayoutInfo').textContent = 
+        `${cols}×${rows} grid (${totalSlots} slots total)`;
+    
+    chartTool.currentLayout = 'custom';
+    chartTool.gridCols = cols;
+    chartTool.gridRows = rows;
+    chartTool.createLayoutSlots();
 }
 
 function updateImageLabel(imageIndex, newLabel) {
     chartTool.uploadedImages[imageIndex].label = newLabel;
-    chartTool.updateSlotOptions();
-    
-    // Update any slots that are currently showing this image
-    Object.keys(chartTool.slotAssignments).forEach(slotIndex => {
-        if (chartTool.slotAssignments[slotIndex] == imageIndex) {
-            const labelElement = document.querySelector(`[data-slot-index="${slotIndex}"] .chart-label`);
-            if (labelElement) {
-                labelElement.textContent = newLabel;
-            }
-        }
-    });
+    chartTool.updateAllSlots();
 }
 
 function generateFinalImage() {
@@ -329,6 +543,10 @@ function generateFinalImage() {
 
 function downloadImage() {
     chartTool.downloadImage();
+}
+
+function clearLayout() {
+    chartTool.clearLayout();
 }
 
 // Initialize when page loads
