@@ -3,8 +3,8 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    max-width: 1400px;
+    font-family: Arial, sans-serif;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
     background-color: #f5f5f5;
@@ -23,15 +23,14 @@ body {
     border: 2px dashed #ccc;
     border-radius: 8px;
     margin-bottom: 20px;
-    transition: border-color 0.3s ease;
 }
 
 .upload-section:hover {
     border-color: #007bff;
 }
 
-.uploaded-images {
-    margin-bottom: 30px;
+#imageUpload {
+    margin-bottom: 10px;
 }
 
 .uploaded-image-card {
@@ -42,19 +41,6 @@ body {
     border-radius: 8px;
     margin-bottom: 10px;
     background: #fafafa;
-    cursor: grab;
-    transition: all 0.3s ease;
-}
-
-.uploaded-image-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.uploaded-image-card.dragging {
-    opacity: 0.5;
-    transform: rotate(5deg);
-    cursor: grabbing;
 }
 
 .uploaded-image-card img {
@@ -63,12 +49,10 @@ body {
     object-fit: cover;
     border-radius: 4px;
     margin-right: 15px;
-    pointer-events: none;
 }
 
 .image-info {
     flex: 1;
-    pointer-events: none;
 }
 
 .image-info input {
@@ -77,89 +61,36 @@ body {
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
-    pointer-events: auto;
 }
 
-.layout-config {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
+#layoutButtons {
+    margin: 20px 0;
 }
 
-.layout-type-selector {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 15px;
-}
-
-.layout-type-selector label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-}
-
-.layout-option {
-    margin-top: 15px;
-}
-
-.layout-option button {
+#layoutButtons button {
     margin: 5px;
-    padding: 8px 12px;
+    padding: 10px 15px;
     border: 1px solid #007bff;
     background: white;
     color: #007bff;
     border-radius: 5px;
     cursor: pointer;
-    transition: all 0.3s ease;
 }
 
-.layout-option button:hover,
-.layout-option button.active {
+#layoutButtons button:hover,
+#layoutButtons button.active {
     background: #007bff;
     color: white;
 }
 
-.layout-option label {
-    display: inline-block;
-    margin-right: 15px;
-    margin-bottom: 10px;
-}
-
-.layout-option input[type="number"] {
-    width: 60px;
-    padding: 5px;
-    margin-left: 5px;
-}
-
-.instructions {
-    background: #e3f2fd;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    border-left: 4px solid #2196f3;
-}
-
-.instructions ul {
-    margin: 0;
-    padding-left: 20px;
-}
-
-.instructions li {
-    margin-bottom: 8px;
-}
-
-.layout-preview {
+#layoutPreview {
     display: grid;
-    gap: var(--grid-spacing, 20px);
+    gap: 15px;
     padding: 20px;
     margin: 20px 0;
-    min-height: 400px;
-    background: white;
     border: 2px solid #ddd;
     border-radius: 8px;
-    position: relative;
+    background: white;
 }
 
 .chart-slot {
@@ -170,46 +101,27 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    position: relative;
     background: #fafafa;
-    transition: all 0.3s ease;
+    position: relative;
     cursor: pointer;
 }
 
-.chart-slot.empty {
-    border-style: dashed;
-    background: #fafafa;
-}
-
 .chart-slot.has-image {
-    border-style: solid;
     border-color: #007bff;
+    border-style: solid;
     background: white;
     padding: 10px;
 }
 
-.chart-slot.drag-over {
-    border-color: #28a745 !important;
-    background-color: #d4edda !important;
-    transform: scale(1.02);
-}
-
-.chart-slot.drag-invalid {
-    border-color: #dc3545 !important;
-    background-color: #f8d7da !important;
-}
-
 .chart-slot img {
     max-width: calc(100% - 20px);
-    max-height: calc(100% - 60px);
+    max-height: calc(100% - 40px);
     object-fit: contain;
-    border-radius: 4px;
-    pointer-events: none;
 }
 
 .chart-label {
     position: absolute;
-    bottom: 10px;
+    bottom: 5px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0,0,0,0.8);
@@ -217,84 +129,32 @@ body {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 12px;
-    max-width: calc(100% - 20px);
     text-align: center;
-    word-wrap: break-word;
-    pointer-events: none;
 }
 
-.slot-number {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    background: #007bff;
-    color: white;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-.label-settings {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-
-.settings-row {
-    display: flex;
-    gap: 30px;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-}
-
-.settings-row:last-child {
-    margin-bottom: 0;
-}
-
-.settings-row label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap;
-}
-
-.settings-row input[type="range"] {
-    width: 100px;
-}
-
-.settings-row select {
+.slot-select {
+    margin-top: 10px;
     padding: 5px;
+    width: 100%;
 }
 
-.controls {
+#controls {
     text-align: center;
-    margin-bottom: 20px;
+    margin: 20px 0;
 }
 
-.controls button {
+#controls button {
     padding: 12px 24px;
     margin: 0 10px;
     border: none;
     border-radius: 5px;
     font-size: 16px;
     cursor: pointer;
-    transition: all 0.3s ease;
 }
 
 #generateBtn {
     background: #28a745;
     color: white;
-}
-
-#generateBtn:hover:not(:disabled) {
-    background: #218838;
-    transform: translateY(-2px);
 }
 
 #downloadBtn {
@@ -307,69 +167,8 @@ body {
     cursor: not-allowed;
 }
 
-.secondary-btn {
-    background: #6c757d !important;
-    color: white !important;
-}
-
-.secondary-btn:hover {
-    background: #5a6268 !important;
-}
-
-#finalImagePreview {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.canvas-container {
-    display: inline-block;
+#finalCanvas {
     border: 1px solid #ddd;
     border-radius: 8px;
-    overflow: hidden;
-}
-
-#finalCanvas {
-    display: block;
     max-width: 100%;
-    height: auto;
-}
-
-.empty-slot-content {
-    text-align: center;
-    color: #666;
-    pointer-events: none;
-}
-
-.empty-slot-content p {
-    margin: 0;
-    font-size: 14px;
-}
-
-/* Drag and drop visual feedback */
-.dragging-image {
-    position: fixed;
-    pointer-events: none;
-    z-index: 1000;
-    opacity: 0.8;
-    transform: rotate(5deg);
-    border: 2px solid #007bff;
-    border-radius: 8px;
-}
-
-@media (max-width: 768px) {
-    .settings-row {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .layout-type-selector {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .controls button {
-        display: block;
-        width: 100%;
-        margin: 5px 0;
-    }
 }
