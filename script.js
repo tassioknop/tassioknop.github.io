@@ -5,6 +5,7 @@ let currentRows = 2;
 let slotAssignments = {}; // slotIndex -> imageIndex
 let draggedImageIndex = null;
 let draggedFromSlot = null;
+let currentLayoutType = 'auto';
 
 console.log('Enhanced script loaded!');
 
@@ -16,89 +17,45 @@ document.addEventListener('DOMContentLoaded', function() {
     if (fileInput) {
         fileInput.addEventListener('change', handleImageUpload);
         console.log('File input listener added!');
+    } else {
+        console.error('File input not found!');
     }
     
     // Show debug section
     document.getElementById('debug').style.display = 'block';
     
-    // Setup advanced controls
-    setupAdvancedControls();
+    // Setup advanced controls listeners
+    setupAdvancedControlsListeners();
 });
 
-function setupAdvancedControls() {
-    // Add advanced controls section after layout buttons
-    const layoutButtons = document.getElementById('layoutButtons');
-    const advancedControlsHTML = `
-        <div class="advanced-controls" id="advancedControls" style="display: none;">
-            <h3>🎨 Customization Options</h3>
-            <div class="control-row">
-                <label>
-                    📏 Spacing: 
-                    <input type="range" id="spacingSlider" min="5" max="50" value="20">
-                    <span id="spacingValue">20px</span>
-                </label>
-                <label>
-                    📝 Font Size: 
-                    <input type="range" id="fontSlider" min="12" max="32" value="16">
-                    <span id="fontValue">16px</span>
-                </label>
-            </div>
-            <div class="control-row">
-                <label>
-                    🎯 Label Position: 
-                    <select id="labelPosition">
-                        <option value="bottom">Bottom</option>
-                        <option value="top">Top</option>
-                        <option value="overlay">Overlay</option>
-                        <option value="none">No Labels</option>
-                    </select>
-                </label>
-                <label>
-                    🎨 Background: 
-                    <select id="backgroundType">
-                        <option value="white">White</option>
-                        <option value="transparent">Transparent</option>
-                        <option value="light">Light Gray</option>
-                        <option value="custom">Custom Color</option>
-                    </select>
-                    <input type="color" id="customBgColor" value="#ffffff" style="display: none;">
-                </label>
-            </div>
-        </div>
-        
-        <div class="instructions" id="instructions" style="display: none;">
-            <h3>📋 How to Use</h3>
-            <ul>
-                <li><strong>🖱️ Drag images</strong> from the list above directly onto the grid slots</li>
-                <li><strong>🔄 Drag between slots</strong> to reorder your layout</li>
-                <li><strong>🖱️ Right-click</strong> on any slot to remove an image</li>
-                <li><strong>✏️ Edit labels</strong> by clicking the text fields above</li>
-                <li><strong>⚙️ Customize</strong> spacing, fonts, and background with the controls above</li>
-            </ul>
-        </div>
-    `;
-    
-    layoutButtons.insertAdjacentHTML('afterend', advancedControlsHTML);
-    
-    // Setup event listeners for advanced controls
+function setupAdvancedControlsListeners() {
+    // Spacing slider
     const spacingSlider = document.getElementById('spacingSlider');
     const spacingValue = document.getElementById('spacingValue');
-    spacingSlider?.addEventListener('input', (e) => {
-        spacingValue.textContent = e.target.value + 'px';
-        updateLayoutSpacing(e.target.value);
-    });
+    if (spacingSlider && spacingValue) {
+        spacingSlider.addEventListener('input', (e) => {
+            spacingValue.textContent = e.target.value + 'px';
+            updateLayoutSpacing(e.target.value);
+        });
+    }
     
+    // Font slider
     const fontSlider = document.getElementById('fontSlider');
     const fontValue = document.getElementById('fontValue');
-    fontSlider?.addEventListener('input', (e) => {
-        fontValue.textContent = e.target.value + 'px';
-    });
+    if (fontSlider && fontValue) {
+        fontSlider.addEventListener('input', (e) => {
+            fontValue.textContent = e.target.value + 'px';
+        });
+    }
     
+    // Background type
     const backgroundType = document.getElementById('backgroundType');
     const customBgColor = document.getElementById('customBgColor');
-    backgroundType?.addEventListener('change', (e) => {
-        customBgColor.style.display = e.target.value === 'custom' ? 'inline' : 'none';
-    });
+    if (backgroundType && customBgColor) {
+        backgroundType.addEventListener('change', (e) => {
+            customBgColor.style.display = e.target.value === 'custom' ? 'inline' : 'none';
+        });
+    }
 }
 
 function updateLayoutSpacing(spacing) {
@@ -221,44 +178,119 @@ function findSlotWithImage(imageIndex) {
 
 function showRelevantSections() {
     console.log('Showing sections...');
-    document.getElementById('layoutButtons').style.display = 'block';
-    document.getElementById('advancedControls').style.display = 'block';
-    document.getElementById('instructions').style.display = 'block';
-    document.getElementById('controls').style.display = 'block';
     
-    // Add fade-in animation
-    [document.getElementById('layoutButtons'), 
-     document.getElementById('advancedControls'),
-     document.getElementById('instructions'),
-     document.getElementById('controls')].forEach(el => {
-        if (el) el.classList.add('fade-in');
+    const elements = [
+        'layoutConfig',
+        'instructions', 
+        'advancedControls',
+        'controls'
+    ];
+    
+    elements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.style.display = 'block';
+            element.classList.add('fade-in');
+        } else {
+            console.warn('Element not found:', id);
+        }
     });
+    
+    // Update auto layout details
+    if (uploadedImages.length > 0) {
+        updateAutoLayoutInfo();
+    }
+}
+
+function updateAutoLayoutInfo() {
+    const info = document.getElementById('autoLayoutDetails');
+    if (info) {
+        const optimal = calculateOptimalGrid(uploadedImages.length);
+        info.textContent = `📐 ${optimal.cols} × ${optimal.rows} grid (${optimal.cols * optimal.rows} slots) for ${uploadedImages.length} images`;
+    }
+}
+
+function calculateOptimalGrid(imageCount) {
+    if (imageCount <= 1) return { cols: 1, rows: 1 };
+    if (imageCount <= 2) return { cols: 2, rows: 1 };
+    if (imageCount <= 4) return { cols: 2, rows: 2 };
+    if (imageCount <= 6) return { cols: 3, rows: 2 };
+    if (imageCount <= 9) return { cols: 3, rows: 3 };
+    if (imageCount <= 12) return { cols: 4, rows: 3 };
+    
+    // For larger numbers, try to keep it roughly square
+    const cols = Math.ceil(Math.sqrt(imageCount));
+    const rows = Math.ceil(imageCount / cols);
+    return { cols, rows };
+}
+
+function updateLayoutType() {
+    const layoutType = document.querySelector('input[name="layoutType"]:checked')?.value || 'auto';
+    
+    console.log('Layout type changed to:', layoutType);
+    currentLayoutType = layoutType;
+    
+    // Show/hide relevant sections
+    const autoInfo = document.getElementById('autoLayoutInfo');
+    const presetLayouts = document.getElementById('presetLayouts');
+    const customGrid = document.getElementById('customGrid');
+    
+    if (autoInfo) autoInfo.style.display = layoutType === 'auto' ? 'block' : 'none';
+    if (presetLayouts) presetLayouts.style.display = layoutType === 'preset' ? 'block' : 'none';
+    if (customGrid) customGrid.style.display = layoutType === 'custom' ? 'block' : 'none';
+    
+    if (layoutType === 'auto' && uploadedImages.length > 0) {
+        autoSetLayout();
+    } else if (layoutType === 'custom') {
+        updateCustomLayout();
+    }
+}
+
+function updateCustomLayout() {
+    const colsInput = document.getElementById('customCols');
+    const rowsInput = document.getElementById('customRows');
+    const info = document.getElementById('customLayoutInfo');
+    
+    if (!colsInput || !rowsInput || !info) return;
+    
+    const cols = parseInt(colsInput.value) || 3;
+    const rows = parseInt(rowsInput.value) || 2;
+    const totalSlots = cols * rows;
+    
+    info.textContent = `${cols} × ${rows} grid = ${totalSlots} total slots`;
+    
+    currentCols = cols;
+    currentRows = rows;
+    
+    if (uploadedImages.length > 0) {
+        createLayoutSlots();
+        autoAssignImages();
+    }
 }
 
 function autoSetLayout() {
     console.log('Auto-setting layout for', uploadedImages.length, 'images');
     
-    const count = uploadedImages.length;
-    if (count === 1) setLayout(1, 1);
-    else if (count === 2) setLayout(2, 1);
-    else if (count <= 4) setLayout(2, 2);
-    else if (count <= 6) setLayout(3, 2);
-    else if (count <= 9) setLayout(3, 3);
-    else if (count <= 12) setLayout(4, 3);
-    else setLayout(4, 4); // For very large numbers
+    const optimal = calculateOptimalGrid(uploadedImages.length);
+    currentCols = optimal.cols;
+    currentRows = optimal.rows;
+    
+    createLayoutSlots();
+    autoAssignImages();
 }
 
 function setLayout(cols, rows) {
     console.log('Setting layout:', cols, 'x', rows);
     
     // Update active button
-    document.querySelectorAll('#layoutButtons button').forEach(btn => {
+    document.querySelectorAll('#presetLayouts button').forEach(btn => {
         btn.classList.remove('active');
     });
     if (event && event.target) event.target.classList.add('active');
     
     currentCols = cols;
     currentRows = rows;
+    currentLayoutType = 'preset';
     
     createLayoutSlots();
     autoAssignImages();
@@ -266,6 +298,11 @@ function setLayout(cols, rows) {
 
 function createLayoutSlots() {
     const preview = document.getElementById('layoutPreview');
+    if (!preview) {
+        console.error('Layout preview element not found!');
+        return;
+    }
+    
     const totalSlots = currentCols * currentRows;
     
     console.log('Creating layout slots:', totalSlots);
@@ -350,9 +387,6 @@ function setupSlotDragAndDrop(slot, slotIndex) {
     });
 }
 
-// Continue with the rest of the functions (autoAssignImages, updateAllSlots, etc.)
-// ... (keeping all the existing functions from the working version)
-
 function autoAssignImages() {
     console.log('Auto-assigning images...');
     slotAssignments = {};
@@ -375,8 +409,16 @@ function updateSlotContent(slot, slotIndex) {
     const imageIndex = slotAssignments[slotIndex];
     const slotNumber = slot.querySelector('.slot-number');
     
+    // Clear slot but keep slot number
     slot.innerHTML = '';
-    slot.appendChild(slotNumber);
+    if (slotNumber) {
+        slot.appendChild(slotNumber);
+    } else {
+        const newSlotNumber = document.createElement('div');
+        newSlotNumber.className = 'slot-number';
+        newSlotNumber.textContent = parseInt(slotIndex) + 1;
+        slot.appendChild(newSlotNumber);
+    }
     
     if (imageIndex !== undefined && uploadedImages[imageIndex]) {
         const img = uploadedImages[imageIndex];
@@ -404,23 +446,29 @@ function updateSlotContent(slot, slotIndex) {
         slot.appendChild(select);
     } else {
         slot.className = 'chart-slot';
-        slot.innerHTML += `
-            <p>Drop image here</p>
-            <select class="slot-select" onchange="assignImageToSlot(${slotIndex}, this.value)">
-                <option value="">Select image...</option>
-                ${uploadedImages.map((img, idx) => 
-                    `<option value="${idx}">${img.label}</option>`
-                ).join('')}
-            </select>
+        
+        const content = document.createElement('p');
+        content.textContent = 'Drop image here';
+        slot.appendChild(content);
+        
+        const select = document.createElement('select');
+        select.className = 'slot-select';
+        select.innerHTML = `
+            <option value="">Select image...</option>
+            ${uploadedImages.map((img, idx) => 
+                `<option value="${idx}">${img.label}</option>`
+            ).join('')}
         `;
+        select.onchange = (e) => assignImageToSlot(slotIndex, e.target.value);
+        slot.appendChild(select);
     }
 }
 
-// Keep all the other existing functions (assignImageToSlot, updateImageLabel, generateImage, etc.)
 function assignImageToSlot(slotIndex, imageIndex, shouldLog = true) {
     if (shouldLog) console.log('Assigning image', imageIndex, 'to slot', slotIndex);
     
     const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+    if (!slot) return;
     
     if (imageIndex === '' || imageIndex === null) {
         delete slotAssignments[slotIndex];
@@ -433,14 +481,21 @@ function assignImageToSlot(slotIndex, imageIndex, shouldLog = true) {
 
 function updateImageLabel(imageIndex, newLabel) {
     console.log('Updating label for image', imageIndex, 'to:', newLabel);
-    uploadedImages[imageIndex].label = newLabel;
-    updateAllSlots();
+    if (uploadedImages[imageIndex]) {
+        uploadedImages[imageIndex].label = newLabel;
+        updateAllSlots();
+    }
 }
 
 function generateImage() {
     console.log('Generating final image...');
     
     const canvas = document.getElementById('finalCanvas');
+    if (!canvas) {
+        console.error('Canvas not found!');
+        return;
+    }
+    
     const ctx = canvas.getContext('2d');
     
     // Get settings
@@ -448,13 +503,19 @@ function generateImage() {
     const fontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
     const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
     const backgroundType = document.getElementById('backgroundType')?.value || 'white';
+    const canvasSize = document.getElementById('canvasSize')?.value || 'medium';
     
-    // Calculate canvas size
-    const cellWidth = 400;
-    const cellHeight = 300;
+    // Calculate canvas size based on selection
+    let baseWidth, baseHeight;
+    switch (canvasSize) {
+        case 'small': baseWidth = 300; baseHeight = 200; break;
+        case 'large': baseWidth = 600; baseHeight = 450; break;
+        case 'xlarge': baseWidth = 800; baseHeight = 600; break;
+        default: baseWidth = 400; baseHeight = 300; // medium
+    }
     
-    canvas.width = (cellWidth * currentCols) + (spacing * (currentCols + 1));
-    canvas.height = (cellHeight * currentRows) + (spacing * (currentRows + 1));
+    canvas.width = (baseWidth * currentCols) + (spacing * (currentCols + 1));
+    canvas.height = (baseHeight * currentRows) + (spacing * (currentRows + 1));
     
     // Set background
     setCanvasBackground(ctx, canvas.width, canvas.height, backgroundType);
@@ -468,27 +529,33 @@ function generateImage() {
             const row = Math.floor(slotIndex / currentCols);
             const col = slotIndex % currentCols;
             
-            const x = spacing + (col * (cellWidth + spacing));
-            const y = spacing + (row * (cellHeight + spacing));
+            const x = spacing + (col * (baseWidth + spacing));
+            const y = spacing + (row * (baseHeight + spacing));
             
-            drawImageInCell(ctx, img, x, y, cellWidth, cellHeight, fontSize, labelPosition);
+            drawImageInCell(ctx, img, x, y, baseWidth, baseHeight, fontSize, labelPosition);
         }
     });
     
     // Show result
-    document.getElementById('finalImagePreview').style.display = 'block';
-    document.getElementById('finalImagePreview').classList.add('fade-in');
-    document.getElementById('downloadBtn').disabled = false;
-    
-    console.log('Image generated!');
-    
-    // Scroll to preview
-    setTimeout(() => {
-        document.getElementById('finalImagePreview').scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-        });
-    }, 100);
+    const preview = document.getElementById('finalImagePreview');
+    if (preview) {
+        preview.style.display = 'block';
+        preview.classList.add('fade-in');
+        
+        // Enable download button
+        const downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn) downloadBtn.disabled = false;
+        
+        console.log('Image generated!');
+        
+        // Scroll to preview
+        setTimeout(() => {
+            preview.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }, 100);
+    }
 }
 
 function setCanvasBackground(ctx, width, height, backgroundType) {
@@ -496,8 +563,12 @@ function setCanvasBackground(ctx, width, height, backgroundType) {
     
     let bgColor = 'white';
     switch (backgroundType) {
-        case 'light': bgColor = '#f5f5f5'; break;
-        case 'custom': bgColor = document.getElementById('customBgColor')?.value || 'white'; break;
+        case 'light': 
+            bgColor = '#f5f5f5'; 
+            break;
+        case 'custom': 
+            bgColor = document.getElementById('customBgColor')?.value || 'white'; 
+            break;
     }
     
     ctx.fillStyle = bgColor;
@@ -566,53 +637,6 @@ function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight, fontSize, la
     }
 }
 
-function downloadImage() {
-    console.log('Downloading image...');
-    
-    const canvas = document.getElementById('finalCanvas');
-    const link = document.createElement('a');
-    link.download = `chart-layout-${currentCols}x${currentRows}-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-}
-
-function updateLayoutType() {
-    const layoutType = document.querySelector('input[name="layoutType"]:checked').value;
-    
-    console.log('Layout type changed to:', layoutType);
-    
-    // Show/hide relevant sections
-    document.getElementById('autoLayoutInfo').style.display = layoutType === 'auto' ? 'block' : 'none';
-    document.getElementById('presetLayouts').style.display = layoutType === 'preset' ? 'block' : 'none';
-    document.getElementById('customGrid').style.display = layoutType === 'custom' ? 'block' : 'none';
-    
-    // Update the current layout type in our tool
-    window.currentLayoutType = layoutType;
-    
-    if (layoutType === 'auto' && uploadedImages.length > 0) {
-        autoSetLayout();
-    } else if (layoutType === 'custom') {
-        updateCustomLayout();
-    }
-}
-
-function updateCustomLayout() {
-    const cols = parseInt(document.getElementById('customCols').value);
-    const rows = parseInt(document.getElementById('customRows').value);
-    const totalSlots = cols * rows;
-    
-    document.getElementById('customLayoutInfo').textContent = 
-        `${cols} × ${rows} grid = ${totalSlots} total slots`;
-    
-    currentCols = cols;
-    currentRows = rows;
-    
-    if (uploadedImages.length > 0) {
-        createLayoutSlots();
-        autoAssignImages();
-    }
-}
-
 function clearLayout() {
     console.log('Clearing layout...');
     slotAssignments = {};
@@ -625,17 +649,18 @@ function resetAll() {
         slotAssignments = {};
         
         // Hide all sections
-        document.getElementById('uploadedImagesSection').style.display = 'none';
-        document.getElementById('layoutConfig').style.display = 'none';
-        document.getElementById('instructions').style.display = 'none';
-        document.getElementById('layoutPreview').style.display = 'none';
-        document.getElementById('advancedControls').style.display = 'none';
-        document.getElementById('controls').style.display = 'none';
-        document.getElementById('finalImagePreview').style.display = 'none';
+        ['uploadedImagesSection', 'layoutConfig', 'instructions', 
+         'layoutPreview', 'advancedControls', 'controls', 'finalImagePreview'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
         
         // Reset file input
-        document.getElementById('imageUpload').value = '';
-        document.getElementById('debugText').textContent = 'Ready to upload new images';
+        const fileInput = document.getElementById('imageUpload');
+        if (fileInput) fileInput.value = '';
+        
+        const debugText = document.getElementById('debugText');
+        if (debugText) debugText.textContent = 'Ready to upload new images';
     }
 }
 
@@ -643,6 +668,8 @@ function downloadImage(format = 'png') {
     console.log('Downloading image as:', format);
     
     const canvas = document.getElementById('finalCanvas');
+    if (!canvas) return;
+    
     const link = document.createElement('a');
     
     let mimeType, extension;
@@ -664,6 +691,8 @@ function downloadImage(format = 'png') {
 async function copyToClipboard() {
     try {
         const canvas = document.getElementById('finalCanvas');
+        if (!canvas) return;
+        
         canvas.toBlob(async (blob) => {
             try {
                 await navigator.clipboard.write([
@@ -679,48 +708,4 @@ async function copyToClipboard() {
         console.error('Clipboard not supported:', err);
         alert('❌ Clipboard not supported in this browser. Try downloading instead.');
     }
-}
-
-// Update the existing showRelevantSections function
-function showRelevantSections() {
-    console.log('Showing sections...');
-    document.getElementById('layoutConfig').style.display = 'block';
-    document.getElementById('instructions').style.display = 'block';
-    document.getElementById('advancedControls').style.display = 'block';
-    document.getElementById('controls').style.display = 'block';
-    
-    // Add fade-in animation
-    [document.getElementById('layoutConfig'), 
-     document.getElementById('instructions'),
-     document.getElementById('advancedControls'),
-     document.getElementById('controls')].forEach(el => {
-        if (el) el.classList.add('fade-in');
-    });
-    
-    // Update auto layout details
-    if (uploadedImages.length > 0) {
-        updateAutoLayoutInfo();
-    }
-}
-
-function updateAutoLayoutInfo() {
-    const info = document.getElementById('autoLayoutDetails');
-    if (info) {
-        const optimal = calculateOptimalGrid(uploadedImages.length);
-        info.textContent = `📐 ${optimal.cols} × ${optimal.rows} grid (${optimal.cols * optimal.rows} slots) for ${uploadedImages.length} images`;
-    }
-}
-
-function calculateOptimalGrid(imageCount) {
-    if (imageCount <= 1) return { cols: 1, rows: 1 };
-    if (imageCount <= 2) return { cols: 2, rows: 1 };
-    if (imageCount <= 4) return { cols: 2, rows: 2 };
-    if (imageCount <= 6) return { cols: 3, rows: 2 };
-    if (imageCount <= 9) return { cols: 3, rows: 3 };
-    if (imageCount <= 12) return { cols: 4, rows: 3 };
-    
-    // For larger numbers, try to keep it roughly square
-    const cols = Math.ceil(Math.sqrt(imageCount));
-    const rows = Math.ceil(imageCount / cols);
-    return { cols, rows };
 }
