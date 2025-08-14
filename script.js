@@ -1,99 +1,51 @@
-// Global variables
-let uploadedImages = [];
+// Chart Layout Tool - Complete Fixed Version
+let images = [];
 let currentCols = 2;
 let currentRows = 2;
-let slotAssignments = {}; // slotIndex -> imageIndex
-let draggedImageIndex = null;
-let draggedFromSlot = null;
-let currentLayoutType = 'auto';
+let slots = {};
 
-console.log('Script loaded!');
+console.log('🚀 Script loaded!');
 
-// Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded!');
+    console.log('📋 DOM loaded!');
     
     const fileInput = document.getElementById('imageUpload');
     if (fileInput) {
-        fileInput.addEventListener('change', handleImageUpload);
-        console.log('File input listener added!');
+        fileInput.addEventListener('change', handleFiles);
+        console.log('✅ File input ready');
     }
     
-    // Show debug section
-    const debug = document.getElementById('debug');
-    if (debug) debug.style.display = 'block';
-    
-    // Setup event listeners for sliders
-    setupEventListeners();
+    showElement('debug');
 });
 
-function setupEventListeners() {
-    // Spacing slider
-    const spacingSlider = document.getElementById('spacingSlider');
-    const spacingValue = document.getElementById('spacingValue');
-    if (spacingSlider && spacingValue) {
-        spacingSlider.addEventListener('input', (e) => {
-            spacingValue.textContent = e.target.value + 'px';
-        });
-    }
-    
-    // Font slider
-    const fontSlider = document.getElementById('fontSlider');
-    const fontValue = document.getElementById('fontValue');
-    if (fontSlider && fontValue) {
-        fontSlider.addEventListener('input', (e) => {
-            fontValue.textContent = e.target.value + 'px';
-        });
-    }
-    
-    // Background type
-    const backgroundType = document.getElementById('backgroundType');
-    const customBgColor = document.getElementById('customBgColor');
-    if (backgroundType && customBgColor) {
-        backgroundType.addEventListener('change', (e) => {
-            customBgColor.style.display = e.target.value === 'custom' ? 'inline' : 'none';
-        });
-    }
-}
-
-function handleImageUpload(event) {
-    console.log('File upload triggered!', event.target.files.length, 'files');
-    
+function handleFiles(event) {
     const files = Array.from(event.target.files);
-    const debugText = document.getElementById('debugText');
-    if (debugText) {
-        debugText.textContent = `Processing ${files.length} files...`;
-    }
+    console.log(`📁 Processing ${files.length} files`);
     
-    let processedCount = 0;
+    updateDebug(`Processing ${files.length} files...`);
     
+    let count = 0;
     files.forEach((file, index) => {
-        console.log('Processing file:', file.name);
-        
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
-                const imageData = {
+                images.push({
                     id: Date.now() + index,
                     src: e.target.result,
-                    image: img,
-                    label: file.name.replace(/\.[^/.]+$/, ""),
-                    originalName: file.name
-                };
+                    img: img,
+                    name: file.name.replace(/\.[^/.]+$/, ""),
+                    file: file.name
+                });
                 
-                uploadedImages.push(imageData);
-                processedCount++;
+                count++;
+                console.log(`✅ Image processed: ${file.name}`);
+                updateDebug(`Processed ${count}/${files.length} images`);
                 
-                console.log('Image processed:', imageData.label);
-                if (debugText) {
-                    debugText.textContent = `Processed ${processedCount}/${files.length} images`;
-                }
+                showImages();
+                showControls();
                 
-                updateUploadedImagesList();
-                showRelevantSections();
-                
-                if (processedCount === files.length) {
+                if (count === files.length) {
                     autoSetLayout();
                 }
             };
@@ -103,399 +55,175 @@ function handleImageUpload(event) {
     });
 }
 
-function updateUploadedImagesList() {
+function showImages() {
     const section = document.getElementById('uploadedImagesSection');
     const list = document.getElementById('uploadedImagesList');
     const count = document.getElementById('imageCount');
     
-    console.log('Updating images list, count:', uploadedImages.length);
+    console.log('✅ Updating images list, count:', images.length);
     
-    if (uploadedImages.length === 0) {
-        if (section) section.style.display = 'none';
-        return;
-    }
+    if (!section || !list) return;
     
-    if (section) section.style.display = 'block';
-    if (count) count.textContent = `(${uploadedImages.length} images)`;
-    if (!list) return;
+    section.style.display = 'block';
+    if (count) count.textContent = `(${images.length} images)`;
     
     list.innerHTML = '';
-    
-    uploadedImages.forEach((img, index) => {
-        const card = document.createElement('div');
-        card.className = 'uploaded-image-card';
-        card.draggable = true;
-        card.dataset.imageIndex = index;
-        
-        card.innerHTML = `
-            <img src="${img.src}" alt="${img.label}">
-            <div class="image-info">
-                <input type="text" 
-                       value="${img.label}" 
-                       onchange="updateImageLabel(${index}, this.value)"
-                       placeholder="Enter chart label...">
-                <small style="color: #666; display: block; margin-top: 8px;">
-                    📁 ${img.originalName}
-                </small>
+    images.forEach((img, i) => {
+        const div = document.createElement('div');
+        div.className = 'uploaded-image-card';
+        div.innerHTML = `
+            <img src="${img.src}" alt="${img.name}" style="width: 80px; height: 60px; object-fit: cover; margin-right: 15px;">
+            <div style="flex: 1;">
+                <input type="text" value="${img.name}" onchange="renameImage(${i}, this.value)" 
+                       style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <small style="color: #666; display: block; margin-top: 5px;">📁 ${img.file}</small>
             </div>
         `;
-        
-        setupImageDragAndDrop(card, index);
-        list.appendChild(card);
+        list.appendChild(div);
     });
 }
 
-function setupImageDragAndDrop(card, imageIndex) {
-    card.addEventListener('dragstart', (e) => {
-        console.log('Drag started for image:', imageIndex);
-        draggedImageIndex = imageIndex;
-        draggedFromSlot = findSlotWithImage(imageIndex);
-        card.classList.add('dragging');
-        
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', '');
-    });
-    
-    card.addEventListener('dragend', (e) => {
-        card.classList.remove('dragging');
-        draggedImageIndex = null;
-        draggedFromSlot = null;
-    });
+function showControls() {
+    console.log('✅ Showing sections...');
+    showElement('layoutConfig');
+    showElement('instructions'); 
+    showElement('advancedControls');
+    showElement('controls');
 }
 
-function findSlotWithImage(imageIndex) {
-    for (let slotIndex in slotAssignments) {
-        if (slotAssignments[slotIndex] === imageIndex) {
-            return parseInt(slotIndex);
-        }
-    }
-    return null;
-}
-
-function showRelevantSections() {
-    console.log('Showing sections...');
-    
-    // List of section IDs to show
-    const sectionIds = [
-        'layoutConfig',
-        'instructions',
-        'advancedControls', 
-        'controls'
-    ];
-    
-    sectionIds.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.style.display = 'block';
-            console.log('Showed section:', id);
-        } else {
-            console.log('Section not found:', id);
-        }
-    });
-    
-    // Update auto layout info
-    updateAutoLayoutInfo();
-}
-
-function updateAutoLayoutInfo() {
-    const info = document.getElementById('autoLayoutDetails');
-    if (info && uploadedImages.length > 0) {
-        const optimal = calculateOptimalGrid(uploadedImages.length);
-        info.textContent = `📐 ${optimal.cols} × ${optimal.rows} grid (${optimal.cols * optimal.rows} slots) for ${uploadedImages.length} images`;
+function showElement(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.display = 'block';
+        console.log('✅ Showed section:', id);
+    } else {
+        console.log('❌ Section not found:', id);
     }
 }
 
-function calculateOptimalGrid(imageCount) {
-    if (imageCount <= 1) return { cols: 1, rows: 1 };
-    if (imageCount <= 2) return { cols: 2, rows: 1 };
-    if (imageCount <= 4) return { cols: 2, rows: 2 };
-    if (imageCount <= 6) return { cols: 3, rows: 2 };
-    if (imageCount <= 9) return { cols: 3, rows: 3 };
-    if (imageCount <= 12) return { cols: 4, rows: 3 };
-    
-    const cols = Math.ceil(Math.sqrt(imageCount));
-    const rows = Math.ceil(imageCount / cols);
-    return { cols, rows };
-}
-
-function updateLayoutType() {
-    const checked = document.querySelector('input[name="layoutType"]:checked');
-    if (!checked) return;
-    
-    const layoutType = checked.value;
-    console.log('Layout type changed to:', layoutType);
-    currentLayoutType = layoutType;
-    
-    // Show/hide sections
-    const autoInfo = document.getElementById('autoLayoutInfo');
-    const presetLayouts = document.getElementById('presetLayouts');
-    const customGrid = document.getElementById('customGrid');
-    
-    if (autoInfo) autoInfo.style.display = layoutType === 'auto' ? 'block' : 'none';
-    if (presetLayouts) presetLayouts.style.display = layoutType === 'preset' ? 'block' : 'none';
-    if (customGrid) customGrid.style.display = layoutType === 'custom' ? 'block' : 'none';
-    
-    if (layoutType === 'auto' && uploadedImages.length > 0) {
-        autoSetLayout();
-    } else if (layoutType === 'custom') {
-        updateCustomLayout();
-    }
-}
-
-function updateCustomLayout() {
-    const colsInput = document.getElementById('customCols');
-    const rowsInput = document.getElementById('customRows');
-    const info = document.getElementById('customLayoutInfo');
-    
-    if (!colsInput || !rowsInput) return;
-    
-    const cols = parseInt(colsInput.value) || 3;
-    const rows = parseInt(rowsInput.value) || 2;
-    const totalSlots = cols * rows;
-    
-    if (info) {
-        info.textContent = `${cols} × ${rows} grid = ${totalSlots} total slots`;
-    }
-    
-    currentCols = cols;
-    currentRows = rows;
-    
-    if (uploadedImages.length > 0) {
-        createLayoutSlots();
-        autoAssignImages();
-    }
+function updateDebug(text) {
+    const debug = document.getElementById('debugText');
+    if (debug) debug.textContent = text;
 }
 
 function autoSetLayout() {
-    console.log('Auto-setting layout for', uploadedImages.length, 'images');
+    // Auto-calculate grid size
+    const count = images.length;
+    console.log('🔧 Auto-setting layout for', count, 'images');
     
-    const optimal = calculateOptimalGrid(uploadedImages.length);
-    currentCols = optimal.cols;
-    currentRows = optimal.rows;
+    if (count <= 1) { currentCols = 1; currentRows = 1; }
+    else if (count <= 2) { currentCols = 2; currentRows = 1; }
+    else if (count <= 4) { currentCols = 2; currentRows = 2; }
+    else if (count <= 6) { currentCols = 3; currentRows = 2; }
+    else if (count <= 9) { currentCols = 3; currentRows = 3; }
+    else { currentCols = 4; currentRows = 3; }
     
-    createLayoutSlots();
-    autoAssignImages();
+    createGrid();
 }
 
-function setLayout(cols, rows) {
-    console.log('Setting layout:', cols, 'x', rows);
+function createGrid() {
+    console.log(`🔧 Creating ${currentCols}x${currentRows} grid`);
     
-    // Update active button
-    document.querySelectorAll('#presetLayouts button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    if (event && event.target) {
-        event.target.classList.add('active');
-    }
-    
-    currentCols = cols;
-    currentRows = rows;
-    currentLayoutType = 'preset';
-    
-    createLayoutSlots();
-    autoAssignImages();
-}
-
-function createLayoutSlots() {
     const preview = document.getElementById('layoutPreview');
-    if (!preview) {
-        console.error('Layout preview not found!');
-        return;
-    }
+    if (!preview) return;
+    
+    preview.style.display = 'grid';
+    preview.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
+    preview.style.gap = '20px';
+    preview.style.padding = '20px';
+    preview.innerHTML = '';
     
     const totalSlots = currentCols * currentRows;
-    console.log('Creating', totalSlots, 'slots in', currentCols, 'x', currentRows, 'grid');
-    
-    preview.innerHTML = '';
-    preview.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
-    preview.style.display = 'grid';
+    console.log(`📐 Creating ${totalSlots} slots in ${currentCols} x ${currentRows} grid`);
     
     for (let i = 0; i < totalSlots; i++) {
         const slot = document.createElement('div');
         slot.className = 'chart-slot';
-        slot.dataset.slotIndex = i;
-        
-        // Add slot number
-        const slotNumber = document.createElement('div');
-        slotNumber.className = 'slot-number';
-        slotNumber.textContent = i + 1;
-        slot.appendChild(slotNumber);
-        
-        // Add content
-        const content = document.createElement('p');
-        content.textContent = 'Drop image here';
-        slot.appendChild(content);
-        
-        // Add select dropdown
-        const select = document.createElement('select');
-        select.className = 'slot-select';
-        select.innerHTML = `
-            <option value="">Select image...</option>
-            ${uploadedImages.map((img, idx) => 
-                `<option value="${idx}">${img.label}</option>`
-            ).join('')}
+        slot.dataset.slot = i;
+        slot.innerHTML = `
+            <div style="position: absolute; top: 5px; left: 5px; background: #007bff; color: white; 
+                        width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; 
+                        justify-content: center; font-size: 12px; font-weight: bold;">${i + 1}</div>
+            <p>Slot ${i + 1}</p>
+            <select onchange="assignImage(${i}, this.value)" style="margin-top: 10px; padding: 5px;">
+                <option value="">Select image...</option>
+                ${images.map((img, idx) => `<option value="${idx}">${img.name}</option>`).join('')}
+            </select>
         `;
-        select.onchange = (e) => assignImageToSlot(i, e.target.value);
-        slot.appendChild(select);
-        
-        setupSlotDragAndDrop(slot, i);
         preview.appendChild(slot);
     }
-}
-
-function setupSlotDragAndDrop(slot, slotIndex) {
-    slot.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        if (draggedImageIndex !== null) {
-            slot.classList.add('drag-over');
-        }
-    });
     
-    slot.addEventListener('dragleave', (e) => {
-        slot.classList.remove('drag-over');
-    });
-    
-    slot.addEventListener('drop', (e) => {
-        e.preventDefault();
-        slot.classList.remove('drag-over');
-        
-        if (draggedImageIndex !== null) {
-            console.log('Dropping image', draggedImageIndex, 'onto slot', slotIndex);
-            
-            const currentImageInSlot = slotAssignments[slotIndex];
-            
-            if (draggedFromSlot !== null && currentImageInSlot !== undefined) {
-                // Swap images
-                slotAssignments[slotIndex] = draggedImageIndex;
-                slotAssignments[draggedFromSlot] = currentImageInSlot;
-            } else if (draggedFromSlot !== null) {
-                // Move image
-                slotAssignments[slotIndex] = draggedImageIndex;
-                delete slotAssignments[draggedFromSlot];
-            } else {
-                // New assignment
-                slotAssignments[slotIndex] = draggedImageIndex;
-            }
-            
-            updateAllSlots();
-        }
-    });
-    
-    // Right-click to remove
-    slot.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (slotAssignments[slotIndex] !== undefined) {
-            delete slotAssignments[slotIndex];
-            updateSlotContent(slot, slotIndex);
+    // Auto-assign images
+    console.log('🎯 Auto-assigning images...');
+    images.forEach((img, i) => {
+        if (i < totalSlots) {
+            slots[i] = i;
+            assignImage(i, i);
         }
     });
 }
 
-function autoAssignImages() {
-    console.log('Auto-assigning images...');
-    slotAssignments = {};
-    uploadedImages.forEach((img, index) => {
-        if (index < currentCols * currentRows) {
-            slotAssignments[index] = index;
-        }
-    });
-    updateAllSlots();
-}
-
-function updateAllSlots() {
-    const slots = document.querySelectorAll('.chart-slot');
-    slots.forEach((slot, index) => {
-        updateSlotContent(slot, index);
-    });
-}
-
-function updateSlotContent(slot, slotIndex) {
-    const imageIndex = slotAssignments[slotIndex];
-    const slotNumber = slot.querySelector('.slot-number');
+function assignImage(slotIndex, imageIndex) {
+    const slot = document.querySelector(`[data-slot="${slotIndex}"]`);
+    if (!slot) return;
     
-    // Clear and rebuild slot
-    slot.innerHTML = '';
-    
-    // Re-add slot number
-    const newSlotNumber = document.createElement('div');
-    newSlotNumber.className = 'slot-number';
-    newSlotNumber.textContent = parseInt(slotIndex) + 1;
-    slot.appendChild(newSlotNumber);
-    
-    if (imageIndex !== undefined && uploadedImages[imageIndex]) {
-        // Has image - show it
-        const img = uploadedImages[imageIndex];
-        slot.className = 'chart-slot has-image';
-        
-        const imgElement = document.createElement('img');
-        imgElement.src = img.src;
-        imgElement.alt = img.label;
-        slot.appendChild(imgElement);
-        
-        const label = document.createElement('div');
-        label.className = 'chart-label';
-        label.textContent = img.label;
-        slot.appendChild(label);
-        
-        const select = document.createElement('select');
-        select.className = 'slot-select';
-        select.innerHTML = `
-            <option value="">Remove image</option>
-            ${uploadedImages.map((img, idx) => 
-                `<option value="${idx}" ${idx == imageIndex ? 'selected' : ''}>${img.label}</option>`
-            ).join('')}
-        `;
-        select.onchange = (e) => assignImageToSlot(slotIndex, e.target.value);
-        slot.appendChild(select);
-    } else {
-        // Empty slot
+    if (imageIndex === '' || imageIndex < 0) {
+        // Clear slot
+        delete slots[slotIndex];
         slot.className = 'chart-slot';
-        
-        const content = document.createElement('p');
-        content.textContent = 'Drop image here';
-        slot.appendChild(content);
-        
-        const select = document.createElement('select');
-        select.className = 'slot-select';
-        select.innerHTML = `
-            <option value="">Select image...</option>
-            ${uploadedImages.map((img, idx) => 
-                `<option value="${idx}">${img.label}</option>`
-            ).join('')}
+        slot.innerHTML = `
+            <div style="position: absolute; top: 5px; left: 5px; background: #007bff; color: white; 
+                        width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; 
+                        justify-content: center; font-size: 12px; font-weight: bold;">${parseInt(slotIndex) + 1}</div>
+            <p>Slot ${parseInt(slotIndex) + 1}</p>
+            <select onchange="assignImage(${slotIndex}, this.value)" style="margin-top: 10px; padding: 5px;">
+                <option value="">Select image...</option>
+                ${images.map((img, idx) => `<option value="${idx}">${img.name}</option>`).join('')}
+            </select>
         `;
-        select.onchange = (e) => assignImageToSlot(slotIndex, e.target.value);
-        slot.appendChild(select);
-    }
-}
-
-function assignImageToSlot(slotIndex, imageIndex) {
-    console.log('Assigning image', imageIndex, 'to slot', slotIndex);
-    
-    if (imageIndex === '' || imageIndex === null) {
-        delete slotAssignments[slotIndex];
     } else {
-        slotAssignments[slotIndex] = parseInt(imageIndex);
-    }
-    
-    const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
-    if (slot) {
-        updateSlotContent(slot, slotIndex);
+        // Assign image
+        const img = images[imageIndex];
+        slots[slotIndex] = parseInt(imageIndex);
+        slot.className = 'chart-slot has-image';
+        slot.innerHTML = `
+            <div style="position: absolute; top: 5px; left: 5px; background: #007bff; color: white; 
+                        width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; 
+                        justify-content: center; font-size: 12px; font-weight: bold;">${parseInt(slotIndex) + 1}</div>
+            <img src="${img.src}" alt="${img.name}" style="max-width: calc(100% - 20px); max-height: calc(100% - 60px); object-fit: contain;">
+            <div style="position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); 
+                        background: rgba(0,0,0,0.8); color: white; padding: 4px 8px; border-radius: 4px; 
+                        font-size: 12px; max-width: calc(100% - 10px); text-align: center;">${img.name}</div>
+            <select onchange="assignImage(${slotIndex}, this.value)" style="margin-top: 10px; padding: 5px;">
+                <option value="">Remove image</option>
+                ${images.map((img, idx) => `<option value="${idx}" ${idx == imageIndex ? 'selected' : ''}>${img.name}</option>`).join('')}
+            </select>
+        `;
     }
 }
 
-function updateImageLabel(imageIndex, newLabel) {
-    console.log('Updating label for image', imageIndex, 'to:', newLabel);
-    if (uploadedImages[imageIndex]) {
-        uploadedImages[imageIndex].label = newLabel;
-        updateAllSlots();
+function renameImage(index, newName) {
+    if (images[index]) {
+        images[index].name = newName;
+        createGrid(); // Refresh grid to show new names
     }
+}
+
+function setLayout(cols, rows) {
+    currentCols = cols;
+    currentRows = rows;
+    slots = {}; // Clear assignments
+    createGrid();
 }
 
 function generateImage() {
     console.log('🎨 Generating final image...');
     
     const canvas = document.getElementById('finalCanvas');
-    if (!canvas) return;
+    if (!canvas) {
+        console.error('❌ Canvas not found!');
+        return;
+    }
     
     const ctx = canvas.getContext('2d');
     
@@ -515,8 +243,8 @@ function generateImage() {
     console.log(`📐 Using ${cellW}×${cellH} per cell (${quality} quality)`);
     
     // Set canvas size
-    canvas.width = (cellW * grid.cols) + (spacing * (grid.cols + 1));
-    canvas.height = (cellH * grid.rows) + (spacing * (grid.rows + 1));
+    canvas.width = (cellW * currentCols) + (spacing * (currentCols + 1));
+    canvas.height = (cellH * currentRows) + (spacing * (currentRows + 1));
     
     console.log(`🖼️ Final canvas: ${canvas.width}×${canvas.height} pixels`);
     
@@ -530,8 +258,8 @@ function generateImage() {
         const img = images[imageIndex];
         if (!img) return;
         
-        const row = Math.floor(slotIndex / grid.cols);
-        const col = slotIndex % grid.cols;
+        const row = Math.floor(slotIndex / currentCols);
+        const col = slotIndex % currentCols;
         const x = spacing + (col * (cellW + spacing));
         const y = spacing + (row * (cellH + spacing));
         
@@ -566,114 +294,26 @@ function generateImage() {
     
     // Show result
     showElement('finalImagePreview');
-    document.getElementById('downloadBtn').disabled = false;
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) downloadBtn.disabled = false;
     
     console.log('✅ Image generated!');
     
     // Scroll to result
     setTimeout(() => {
-        document.getElementById('finalImagePreview').scrollIntoView({ behavior: 'smooth' });
+        const preview = document.getElementById('finalImagePreview');
+        if (preview) preview.scrollIntoView({ behavior: 'smooth' });
     }, 100);
 }
 
-
-function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight, fontSize, labelPosition) {
-    const padding = 20;
-    const labelHeight = labelPosition === 'none' ? 0 : fontSize + 15;
-    
-    let availableWidth = cellWidth - (padding * 2);
-    let availableHeight = cellHeight - (padding * 2);
-    let imageY = y + padding;
-    
-    if (labelPosition === 'top' || labelPosition === 'bottom') {
-        availableHeight -= labelHeight;
-        if (labelPosition === 'top') {
-            imageY += labelHeight;
-        }
-    }
-    
-    // Calculate scaling
-    const scale = Math.min(
-        availableWidth / imgData.image.width,
-        availableHeight / imgData.image.height
-    );
-    
-    const scaledWidth = imgData.image.width * scale;
-    const scaledHeight = imgData.image.height * scale;
-    
-    // Center the image
-    const imageX = x + padding + (availableWidth - scaledWidth) / 2;
-    const centeredImageY = imageY + (availableHeight - scaledHeight) / 2;
-    
-    // Draw image
-    ctx.drawImage(imgData.image, imageX, centeredImageY, scaledWidth, scaledHeight);
-    
-    // Draw label
-    if (labelPosition !== 'none') {
-        ctx.fillStyle = 'black';
-        ctx.font = `${fontSize}px Arial`;
-        ctx.textAlign = 'center';
-        
-        const labelX = x + cellWidth / 2;
-        let labelY;
-        
-        switch (labelPosition) {
-            case 'top':
-                labelY = y + padding + fontSize;
-                break;
-            case 'bottom':
-                labelY = y + cellHeight - padding/2;
-                break;
-            case 'overlay':
-                labelY = centeredImageY + scaledHeight - 10;
-                const textWidth = ctx.measureText(imgData.label).width;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.fillRect(labelX - textWidth/2 - 8, labelY - fontSize - 4, textWidth + 16, fontSize + 8);
-                ctx.fillStyle = 'black';
-                break;
-        }
-        
-        ctx.fillText(imgData.label, labelX, labelY);
-    }
-}
-
-function clearLayout() {
-    console.log('Clearing layout...');
-    slotAssignments = {};
-    updateAllSlots();
-}
-
-function resetAll() {
-    if (confirm('This will remove all images and start over. Are you sure?')) {
-        uploadedImages = [];
-        slotAssignments = {};
-        
-        // Hide sections
-        const sections = ['uploadedImagesSection', 'layoutConfig', 'instructions', 
-                         'layoutPreview', 'advancedControls', 'controls', 'finalImagePreview'];
-        
-        sections.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) element.style.display = 'none';
-        });
-        
-        // Reset file input
-        const fileInput = document.getElementById('imageUpload');
-        if (fileInput) fileInput.value = '';
-        
-        const debugText = document.getElementById('debugText');
-        if (debugText) debugText.textContent = 'Ready to upload new images';
-    }
-}
-
 function downloadImage(format = 'png') {
-    console.log('Downloading image as:', format);
+    console.log('💾 Downloading image as:', format);
     
     const canvas = document.getElementById('finalCanvas');
     if (!canvas) return;
     
     const link = document.createElement('a');
-    const quality = 0.9;
+    const quality = 0.95;
     
     if (format === 'jpg') {
         link.href = canvas.toDataURL('image/jpeg', quality);
@@ -684,6 +324,45 @@ function downloadImage(format = 'png') {
     }
     
     link.click();
+    console.log('✅ Download triggered!');
+}
+
+// Layout type functions (for HTML compatibility)
+function updateLayoutType() {
+    const type = document.querySelector('input[name="layoutType"]:checked')?.value || 'auto';
+    console.log('🔧 Layout type:', type);
+    
+    const autoInfo = document.getElementById('autoLayoutInfo');
+    const presetLayouts = document.getElementById('presetLayouts');
+    const customGrid = document.getElementById('customGrid');
+    
+    if (autoInfo) autoInfo.style.display = type === 'auto' ? 'block' : 'none';
+    if (presetLayouts) presetLayouts.style.display = type === 'preset' ? 'block' : 'none';
+    if (customGrid) customGrid.style.display = type === 'custom' ? 'block' : 'none';
+    
+    if (type === 'auto' && images.length > 0) {
+        autoSetLayout();
+    }
+}
+
+function updateCustomLayout() {
+    const cols = parseInt(document.getElementById('customCols')?.value) || 3;
+    const rows = parseInt(document.getElementById('customRows')?.value) || 2;
+    console.log(`🔧 Custom layout: ${cols}x${rows}`);
+    setLayout(cols, rows);
+}
+
+function clearLayout() { 
+    console.log('🗑️ Clearing layout...');
+    slots = {}; 
+    createGrid(); 
+}
+
+function resetAll() { 
+    if (confirm('🔄 This will remove all images and start over. Are you sure?')) {
+        console.log('🔄 Resetting everything...');
+        location.reload(); 
+    }
 }
 
 async function copyToClipboard() {
