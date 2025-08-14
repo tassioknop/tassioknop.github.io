@@ -575,3 +575,152 @@ function downloadImage() {
     link.href = canvas.toDataURL('image/png');
     link.click();
 }
+
+function updateLayoutType() {
+    const layoutType = document.querySelector('input[name="layoutType"]:checked').value;
+    
+    console.log('Layout type changed to:', layoutType);
+    
+    // Show/hide relevant sections
+    document.getElementById('autoLayoutInfo').style.display = layoutType === 'auto' ? 'block' : 'none';
+    document.getElementById('presetLayouts').style.display = layoutType === 'preset' ? 'block' : 'none';
+    document.getElementById('customGrid').style.display = layoutType === 'custom' ? 'block' : 'none';
+    
+    // Update the current layout type in our tool
+    window.currentLayoutType = layoutType;
+    
+    if (layoutType === 'auto' && uploadedImages.length > 0) {
+        autoSetLayout();
+    } else if (layoutType === 'custom') {
+        updateCustomLayout();
+    }
+}
+
+function updateCustomLayout() {
+    const cols = parseInt(document.getElementById('customCols').value);
+    const rows = parseInt(document.getElementById('customRows').value);
+    const totalSlots = cols * rows;
+    
+    document.getElementById('customLayoutInfo').textContent = 
+        `${cols} × ${rows} grid = ${totalSlots} total slots`;
+    
+    currentCols = cols;
+    currentRows = rows;
+    
+    if (uploadedImages.length > 0) {
+        createLayoutSlots();
+        autoAssignImages();
+    }
+}
+
+function clearLayout() {
+    console.log('Clearing layout...');
+    slotAssignments = {};
+    updateAllSlots();
+}
+
+function resetAll() {
+    if (confirm('This will remove all images and start over. Are you sure?')) {
+        uploadedImages = [];
+        slotAssignments = {};
+        
+        // Hide all sections
+        document.getElementById('uploadedImagesSection').style.display = 'none';
+        document.getElementById('layoutConfig').style.display = 'none';
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('layoutPreview').style.display = 'none';
+        document.getElementById('advancedControls').style.display = 'none';
+        document.getElementById('controls').style.display = 'none';
+        document.getElementById('finalImagePreview').style.display = 'none';
+        
+        // Reset file input
+        document.getElementById('imageUpload').value = '';
+        document.getElementById('debugText').textContent = 'Ready to upload new images';
+    }
+}
+
+function downloadImage(format = 'png') {
+    console.log('Downloading image as:', format);
+    
+    const canvas = document.getElementById('finalCanvas');
+    const link = document.createElement('a');
+    
+    let mimeType, extension;
+    if (format === 'jpg') {
+        mimeType = 'image/jpeg';
+        extension = 'jpg';
+    } else {
+        mimeType = 'image/png';
+        extension = 'png';
+    }
+    
+    const quality = parseFloat(document.getElementById('imageQuality')?.value || 0.9);
+    
+    link.download = `chart-layout-${currentCols}x${currentRows}-${Date.now()}.${extension}`;
+    link.href = canvas.toDataURL(mimeType, quality);
+    link.click();
+}
+
+async function copyToClipboard() {
+    try {
+        const canvas = document.getElementById('finalCanvas');
+        canvas.toBlob(async (blob) => {
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                alert('✅ Image copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy to clipboard:', err);
+                alert('❌ Failed to copy to clipboard. Try downloading instead.');
+            }
+        });
+    } catch (err) {
+        console.error('Clipboard not supported:', err);
+        alert('❌ Clipboard not supported in this browser. Try downloading instead.');
+    }
+}
+
+// Update the existing showRelevantSections function
+function showRelevantSections() {
+    console.log('Showing sections...');
+    document.getElementById('layoutConfig').style.display = 'block';
+    document.getElementById('instructions').style.display = 'block';
+    document.getElementById('advancedControls').style.display = 'block';
+    document.getElementById('controls').style.display = 'block';
+    
+    // Add fade-in animation
+    [document.getElementById('layoutConfig'), 
+     document.getElementById('instructions'),
+     document.getElementById('advancedControls'),
+     document.getElementById('controls')].forEach(el => {
+        if (el) el.classList.add('fade-in');
+    });
+    
+    // Update auto layout details
+    if (uploadedImages.length > 0) {
+        updateAutoLayoutInfo();
+    }
+}
+
+function updateAutoLayoutInfo() {
+    const info = document.getElementById('autoLayoutDetails');
+    if (info) {
+        const optimal = calculateOptimalGrid(uploadedImages.length);
+        info.textContent = `📐 ${optimal.cols} × ${optimal.rows} grid (${optimal.cols * optimal.rows} slots) for ${uploadedImages.length} images`;
+    }
+}
+
+function calculateOptimalGrid(imageCount) {
+    if (imageCount <= 1) return { cols: 1, rows: 1 };
+    if (imageCount <= 2) return { cols: 2, rows: 1 };
+    if (imageCount <= 4) return { cols: 2, rows: 2 };
+    if (imageCount <= 6) return { cols: 3, rows: 2 };
+    if (imageCount <= 9) return { cols: 3, rows: 3 };
+    if (imageCount <= 12) return { cols: 4, rows: 3 };
+    
+    // For larger numbers, try to keep it roughly square
+    const cols = Math.ceil(Math.sqrt(imageCount));
+    const rows = Math.ceil(imageCount / cols);
+    return { cols, rows };
+}
