@@ -7,7 +7,7 @@ let draggedImageIndex = null;
 let draggedFromSlot = null;
 let currentLayoutType = 'auto';
 
-console.log('Enhanced script loaded!');
+console.log('Script loaded!');
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,25 +17,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (fileInput) {
         fileInput.addEventListener('change', handleImageUpload);
         console.log('File input listener added!');
-    } else {
-        console.error('File input not found!');
     }
     
     // Show debug section
-    document.getElementById('debug').style.display = 'block';
+    const debug = document.getElementById('debug');
+    if (debug) debug.style.display = 'block';
     
-    // Setup advanced controls listeners
-    setupAdvancedControlsListeners();
+    // Setup event listeners for sliders
+    setupEventListeners();
 });
 
-function setupAdvancedControlsListeners() {
+function setupEventListeners() {
     // Spacing slider
     const spacingSlider = document.getElementById('spacingSlider');
     const spacingValue = document.getElementById('spacingValue');
     if (spacingSlider && spacingValue) {
         spacingSlider.addEventListener('input', (e) => {
             spacingValue.textContent = e.target.value + 'px';
-            updateLayoutSpacing(e.target.value);
         });
     }
     
@@ -58,18 +56,14 @@ function setupAdvancedControlsListeners() {
     }
 }
 
-function updateLayoutSpacing(spacing) {
-    const preview = document.getElementById('layoutPreview');
-    if (preview) {
-        preview.style.gap = spacing + 'px';
-    }
-}
-
 function handleImageUpload(event) {
     console.log('File upload triggered!', event.target.files.length, 'files');
     
     const files = Array.from(event.target.files);
-    document.getElementById('debugText').textContent = `Processing ${files.length} files...`;
+    const debugText = document.getElementById('debugText');
+    if (debugText) {
+        debugText.textContent = `Processing ${files.length} files...`;
+    }
     
     let processedCount = 0;
     
@@ -92,8 +86,9 @@ function handleImageUpload(event) {
                 processedCount++;
                 
                 console.log('Image processed:', imageData.label);
-                document.getElementById('debugText').textContent = 
-                    `Processed ${processedCount}/${files.length} images`;
+                if (debugText) {
+                    debugText.textContent = `Processed ${processedCount}/${files.length} images`;
+                }
                 
                 updateUploadedImagesList();
                 showRelevantSections();
@@ -116,13 +111,14 @@ function updateUploadedImagesList() {
     console.log('Updating images list, count:', uploadedImages.length);
     
     if (uploadedImages.length === 0) {
-        section.style.display = 'none';
+        if (section) section.style.display = 'none';
         return;
     }
     
-    section.style.display = 'block';
-    section.classList.add('fade-in');
-    count.textContent = `(${uploadedImages.length} images)`;
+    if (section) section.style.display = 'block';
+    if (count) count.textContent = `(${uploadedImages.length} images)`;
+    if (!list) return;
+    
     list.innerHTML = '';
     
     uploadedImages.forEach((img, index) => {
@@ -179,32 +175,31 @@ function findSlotWithImage(imageIndex) {
 function showRelevantSections() {
     console.log('Showing sections...');
     
-    const elements = [
+    // List of section IDs to show
+    const sectionIds = [
         'layoutConfig',
-        'instructions', 
-        'advancedControls',
+        'instructions',
+        'advancedControls', 
         'controls'
     ];
     
-    elements.forEach(id => {
+    sectionIds.forEach(id => {
         const element = document.getElementById(id);
         if (element) {
             element.style.display = 'block';
-            element.classList.add('fade-in');
+            console.log('Showed section:', id);
         } else {
-            console.warn('Element not found:', id);
+            console.log('Section not found:', id);
         }
     });
     
-    // Update auto layout details
-    if (uploadedImages.length > 0) {
-        updateAutoLayoutInfo();
-    }
+    // Update auto layout info
+    updateAutoLayoutInfo();
 }
 
 function updateAutoLayoutInfo() {
     const info = document.getElementById('autoLayoutDetails');
-    if (info) {
+    if (info && uploadedImages.length > 0) {
         const optimal = calculateOptimalGrid(uploadedImages.length);
         info.textContent = `📐 ${optimal.cols} × ${optimal.rows} grid (${optimal.cols * optimal.rows} slots) for ${uploadedImages.length} images`;
     }
@@ -218,19 +213,20 @@ function calculateOptimalGrid(imageCount) {
     if (imageCount <= 9) return { cols: 3, rows: 3 };
     if (imageCount <= 12) return { cols: 4, rows: 3 };
     
-    // For larger numbers, try to keep it roughly square
     const cols = Math.ceil(Math.sqrt(imageCount));
     const rows = Math.ceil(imageCount / cols);
     return { cols, rows };
 }
 
 function updateLayoutType() {
-    const layoutType = document.querySelector('input[name="layoutType"]:checked')?.value || 'auto';
+    const checked = document.querySelector('input[name="layoutType"]:checked');
+    if (!checked) return;
     
+    const layoutType = checked.value;
     console.log('Layout type changed to:', layoutType);
     currentLayoutType = layoutType;
     
-    // Show/hide relevant sections
+    // Show/hide sections
     const autoInfo = document.getElementById('autoLayoutInfo');
     const presetLayouts = document.getElementById('presetLayouts');
     const customGrid = document.getElementById('customGrid');
@@ -251,13 +247,15 @@ function updateCustomLayout() {
     const rowsInput = document.getElementById('customRows');
     const info = document.getElementById('customLayoutInfo');
     
-    if (!colsInput || !rowsInput || !info) return;
+    if (!colsInput || !rowsInput) return;
     
     const cols = parseInt(colsInput.value) || 3;
     const rows = parseInt(rowsInput.value) || 2;
     const totalSlots = cols * rows;
     
-    info.textContent = `${cols} × ${rows} grid = ${totalSlots} total slots`;
+    if (info) {
+        info.textContent = `${cols} × ${rows} grid = ${totalSlots} total slots`;
+    }
     
     currentCols = cols;
     currentRows = rows;
@@ -286,7 +284,9 @@ function setLayout(cols, rows) {
     document.querySelectorAll('#presetLayouts button').forEach(btn => {
         btn.classList.remove('active');
     });
-    if (event && event.target) event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
     
     currentCols = cols;
     currentRows = rows;
@@ -299,18 +299,16 @@ function setLayout(cols, rows) {
 function createLayoutSlots() {
     const preview = document.getElementById('layoutPreview');
     if (!preview) {
-        console.error('Layout preview element not found!');
+        console.error('Layout preview not found!');
         return;
     }
     
     const totalSlots = currentCols * currentRows;
-    
-    console.log('Creating layout slots:', totalSlots);
+    console.log('Creating', totalSlots, 'slots in', currentCols, 'x', currentRows, 'grid');
     
     preview.innerHTML = '';
     preview.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
     preview.style.display = 'grid';
-    preview.classList.add('fade-in');
     
     for (let i = 0; i < totalSlots; i++) {
         const slot = document.createElement('div');
@@ -323,15 +321,22 @@ function createLayoutSlots() {
         slotNumber.textContent = i + 1;
         slot.appendChild(slotNumber);
         
-        slot.innerHTML += `
-            <p>Drop image here</p>
-            <select class="slot-select" onchange="assignImageToSlot(${i}, this.value)">
-                <option value="">Select image...</option>
-                ${uploadedImages.map((img, idx) => 
-                    `<option value="${idx}">${img.label}</option>`
-                ).join('')}
-            </select>
+        // Add content
+        const content = document.createElement('p');
+        content.textContent = 'Drop image here';
+        slot.appendChild(content);
+        
+        // Add select dropdown
+        const select = document.createElement('select');
+        select.className = 'slot-select';
+        select.innerHTML = `
+            <option value="">Select image...</option>
+            ${uploadedImages.map((img, idx) => 
+                `<option value="${idx}">${img.label}</option>`
+            ).join('')}
         `;
+        select.onchange = (e) => assignImageToSlot(i, e.target.value);
+        slot.appendChild(select);
         
         setupSlotDragAndDrop(slot, i);
         preview.appendChild(slot);
@@ -357,7 +362,6 @@ function setupSlotDragAndDrop(slot, slotIndex) {
         if (draggedImageIndex !== null) {
             console.log('Dropping image', draggedImageIndex, 'onto slot', slotIndex);
             
-            // Handle swapping if both slots have images
             const currentImageInSlot = slotAssignments[slotIndex];
             
             if (draggedFromSlot !== null && currentImageInSlot !== undefined) {
@@ -365,11 +369,11 @@ function setupSlotDragAndDrop(slot, slotIndex) {
                 slotAssignments[slotIndex] = draggedImageIndex;
                 slotAssignments[draggedFromSlot] = currentImageInSlot;
             } else if (draggedFromSlot !== null) {
-                // Move image from one slot to empty slot
+                // Move image
                 slotAssignments[slotIndex] = draggedImageIndex;
                 delete slotAssignments[draggedFromSlot];
             } else {
-                // Assign new image to slot
+                // New assignment
                 slotAssignments[slotIndex] = draggedImageIndex;
             }
             
@@ -409,18 +413,17 @@ function updateSlotContent(slot, slotIndex) {
     const imageIndex = slotAssignments[slotIndex];
     const slotNumber = slot.querySelector('.slot-number');
     
-    // Clear slot but keep slot number
+    // Clear and rebuild slot
     slot.innerHTML = '';
-    if (slotNumber) {
-        slot.appendChild(slotNumber);
-    } else {
-        const newSlotNumber = document.createElement('div');
-        newSlotNumber.className = 'slot-number';
-        newSlotNumber.textContent = parseInt(slotIndex) + 1;
-        slot.appendChild(newSlotNumber);
-    }
+    
+    // Re-add slot number
+    const newSlotNumber = document.createElement('div');
+    newSlotNumber.className = 'slot-number';
+    newSlotNumber.textContent = parseInt(slotIndex) + 1;
+    slot.appendChild(newSlotNumber);
     
     if (imageIndex !== undefined && uploadedImages[imageIndex]) {
+        // Has image - show it
         const img = uploadedImages[imageIndex];
         slot.className = 'chart-slot has-image';
         
@@ -445,6 +448,7 @@ function updateSlotContent(slot, slotIndex) {
         select.onchange = (e) => assignImageToSlot(slotIndex, e.target.value);
         slot.appendChild(select);
     } else {
+        // Empty slot
         slot.className = 'chart-slot';
         
         const content = document.createElement('p');
@@ -464,11 +468,8 @@ function updateSlotContent(slot, slotIndex) {
     }
 }
 
-function assignImageToSlot(slotIndex, imageIndex, shouldLog = true) {
-    if (shouldLog) console.log('Assigning image', imageIndex, 'to slot', slotIndex);
-    
-    const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
-    if (!slot) return;
+function assignImageToSlot(slotIndex, imageIndex) {
+    console.log('Assigning image', imageIndex, 'to slot', slotIndex);
     
     if (imageIndex === '' || imageIndex === null) {
         delete slotAssignments[slotIndex];
@@ -476,7 +477,10 @@ function assignImageToSlot(slotIndex, imageIndex, shouldLog = true) {
         slotAssignments[slotIndex] = parseInt(imageIndex);
     }
     
-    updateSlotContent(slot, slotIndex);
+    const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+    if (slot) {
+        updateSlotContent(slot, slotIndex);
+    }
 }
 
 function updateImageLabel(imageIndex, newLabel) {
@@ -498,27 +502,28 @@ function generateImage() {
     
     const ctx = canvas.getContext('2d');
     
-    // Get settings
+    // Get settings with defaults
     const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
     const fontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
     const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
     const backgroundType = document.getElementById('backgroundType')?.value || 'white';
-    const canvasSize = document.getElementById('canvasSize')?.value || 'medium';
     
-    // Calculate canvas size based on selection
-    let baseWidth, baseHeight;
-    switch (canvasSize) {
-        case 'small': baseWidth = 300; baseHeight = 200; break;
-        case 'large': baseWidth = 600; baseHeight = 450; break;
-        case 'xlarge': baseWidth = 800; baseHeight = 600; break;
-        default: baseWidth = 400; baseHeight = 300; // medium
-    }
+    // Set canvas size
+    const cellWidth = 400;
+    const cellHeight = 300;
     
-    canvas.width = (baseWidth * currentCols) + (spacing * (currentCols + 1));
-    canvas.height = (baseHeight * currentRows) + (spacing * (currentRows + 1));
+    canvas.width = (cellWidth * currentCols) + (spacing * (currentCols + 1));
+    canvas.height = (cellHeight * currentRows) + (spacing * (currentRows + 1));
     
     // Set background
-    setCanvasBackground(ctx, canvas.width, canvas.height, backgroundType);
+    if (backgroundType !== 'transparent') {
+        let bgColor = 'white';
+        if (backgroundType === 'light') bgColor = '#f5f5f5';
+        if (backgroundType === 'custom') bgColor = document.getElementById('customBgColor')?.value || 'white';
+        
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     
     // Draw each assigned image
     Object.keys(slotAssignments).forEach(slotIndex => {
@@ -529,10 +534,10 @@ function generateImage() {
             const row = Math.floor(slotIndex / currentCols);
             const col = slotIndex % currentCols;
             
-            const x = spacing + (col * (baseWidth + spacing));
-            const y = spacing + (row * (baseHeight + spacing));
+            const x = spacing + (col * (cellWidth + spacing));
+            const y = spacing + (row * (cellHeight + spacing));
             
-            drawImageInCell(ctx, img, x, y, baseWidth, baseHeight, fontSize, labelPosition);
+            drawImageInCell(ctx, img, x, y, cellWidth, cellHeight, fontSize, labelPosition);
         }
     });
     
@@ -540,7 +545,6 @@ function generateImage() {
     const preview = document.getElementById('finalImagePreview');
     if (preview) {
         preview.style.display = 'block';
-        preview.classList.add('fade-in');
         
         // Enable download button
         const downloadBtn = document.getElementById('downloadBtn');
@@ -550,29 +554,9 @@ function generateImage() {
         
         // Scroll to preview
         setTimeout(() => {
-            preview.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
-            });
+            preview.scrollIntoView({ behavior: 'smooth' });
         }, 100);
     }
-}
-
-function setCanvasBackground(ctx, width, height, backgroundType) {
-    if (backgroundType === 'transparent') return;
-    
-    let bgColor = 'white';
-    switch (backgroundType) {
-        case 'light': 
-            bgColor = '#f5f5f5'; 
-            break;
-        case 'custom': 
-            bgColor = document.getElementById('customBgColor')?.value || 'white'; 
-            break;
-    }
-    
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, width, height);
 }
 
 function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight, fontSize, labelPosition) {
@@ -583,7 +567,6 @@ function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight, fontSize, la
     let availableHeight = cellHeight - (padding * 2);
     let imageY = y + padding;
     
-    // Adjust for label position
     if (labelPosition === 'top' || labelPosition === 'bottom') {
         availableHeight -= labelHeight;
         if (labelPosition === 'top') {
@@ -625,7 +608,6 @@ function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight, fontSize, la
                 break;
             case 'overlay':
                 labelY = centeredImageY + scaledHeight - 10;
-                // Add background for overlay
                 const textWidth = ctx.measureText(imgData.label).width;
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                 ctx.fillRect(labelX - textWidth/2 - 8, labelY - fontSize - 4, textWidth + 16, fontSize + 8);
@@ -648,9 +630,11 @@ function resetAll() {
         uploadedImages = [];
         slotAssignments = {};
         
-        // Hide all sections
-        ['uploadedImagesSection', 'layoutConfig', 'instructions', 
-         'layoutPreview', 'advancedControls', 'controls', 'finalImagePreview'].forEach(id => {
+        // Hide sections
+        const sections = ['uploadedImagesSection', 'layoutConfig', 'instructions', 
+                         'layoutPreview', 'advancedControls', 'controls', 'finalImagePreview'];
+        
+        sections.forEach(id => {
             const element = document.getElementById(id);
             if (element) element.style.display = 'none';
         });
@@ -671,20 +655,16 @@ function downloadImage(format = 'png') {
     if (!canvas) return;
     
     const link = document.createElement('a');
+    const quality = 0.9;
     
-    let mimeType, extension;
     if (format === 'jpg') {
-        mimeType = 'image/jpeg';
-        extension = 'jpg';
+        link.href = canvas.toDataURL('image/jpeg', quality);
+        link.download = `chart-layout-${currentCols}x${currentRows}-${Date.now()}.jpg`;
     } else {
-        mimeType = 'image/png';
-        extension = 'png';
+        link.href = canvas.toDataURL('image/png');
+        link.download = `chart-layout-${currentCols}x${currentRows}-${Date.now()}.png`;
     }
     
-    const quality = parseFloat(document.getElementById('imageQuality')?.value || 0.9);
-    
-    link.download = `chart-layout-${currentCols}x${currentRows}-${Date.now()}.${extension}`;
-    link.href = canvas.toDataURL(mimeType, quality);
     link.click();
 }
 
@@ -700,12 +680,10 @@ async function copyToClipboard() {
                 ]);
                 alert('✅ Image copied to clipboard!');
             } catch (err) {
-                console.error('Failed to copy to clipboard:', err);
                 alert('❌ Failed to copy to clipboard. Try downloading instead.');
             }
         });
     } catch (err) {
-        console.error('Clipboard not supported:', err);
         alert('❌ Clipboard not supported in this browser. Try downloading instead.');
     }
 }
