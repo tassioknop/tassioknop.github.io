@@ -13,133 +13,45 @@
         <!-- File Upload -->
         <div class="upload-section">
             <input type="file" id="imageUpload" multiple accept="image/*">
-            <p>Upload your chart images (unlimited)</p>
+            <p>Upload your chart images</p>
         </div>
         
-        <!-- Uploaded Images Preview with Labels -->
-        <div id="uploadedImagesSection" class="uploaded-images" style="display: none;">
+        <!-- Debug info -->
+        <div id="debug" style="background: #f0f0f0; padding: 10px; margin: 10px 0; display: none;">
+            <h4>Debug Info:</h4>
+            <p id="debugText">No images uploaded yet</p>
+        </div>
+        
+        <!-- Uploaded Images List -->
+        <div id="uploadedImagesSection" style="display: none;">
             <h3>Uploaded Images <span id="imageCount"></span></h3>
             <div id="uploadedImagesList"></div>
         </div>
         
-        <!-- Layout Configuration -->
-        <div class="layout-config" id="layoutConfig" style="display: none;">
-            <h3>Layout Configuration</h3>
-            
-            <div class="layout-options">
-                <div class="layout-type-selector">
-                    <label>
-                        <input type="radio" name="layoutType" value="auto" checked onchange="updateLayoutType()">
-                        Auto-fit (recommended)
-                    </label>
-                    <label>
-                        <input type="radio" name="layoutType" value="preset" onchange="updateLayoutType()">
-                        Preset layouts
-                    </label>
-                    <label>
-                        <input type="radio" name="layoutType" value="custom" onchange="updateLayoutType()">
-                        Custom grid
-                    </label>
-                </div>
-                
-                <!-- Auto Layout Info -->
-                <div id="autoLayoutInfo" class="layout-option">
-                    <p>Automatically calculates the best grid size for your images</p>
-                    <p id="autoLayoutDetails"></p>
-                </div>
-                
-                <!-- Preset Layouts -->
-                <div id="presetLayouts" class="layout-option" style="display: none;">
-                    <button onclick="setLayout('1x2')">1×2</button>
-                    <button onclick="setLayout('2x1')">2×1</button>
-                    <button onclick="setLayout('2x2')">2×2</button>
-                    <button onclick="setLayout('1x3')">1×3</button>
-                    <button onclick="setLayout('3x1')">3×1</button>
-                    <button onclick="setLayout('2x3')">2×3</button>
-                    <button onclick="setLayout('3x2')">3×2</button>
-                </div>
-                
-                <!-- Custom Grid -->
-                <div id="customGrid" class="layout-option" style="display: none;">
-                    <label>
-                        Columns: <input type="number" id="customCols" min="1" max="6" value="3" onchange="updateCustomLayout()">
-                    </label>
-                    <label>
-                        Rows: <input type="number" id="customRows" min="1" max="6" value="2" onchange="updateCustomLayout()">
-                    </label>
-                    <p id="customLayoutInfo"></p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Drag and Drop Instructions -->
-        <div id="dragInstructions" class="instructions" style="display: none;">
-            <h3>📋 Instructions</h3>
-            <ul>
-                <li><strong>Drag images</strong> from the uploaded list to the grid slots below</li>
-                <li><strong>Drag between slots</strong> to reorder your layout</li>
-                <li><strong>Right-click</strong> on a slot to remove an image</li>
-                <li><strong>Edit labels</strong> directly in the uploaded images section above</li>
-            </ul>
+        <!-- Simple Layout Buttons -->
+        <div id="layoutButtons" style="display: none;">
+            <h3>Choose Layout:</h3>
+            <button onclick="setLayout(2, 2)">2×2 Grid</button>
+            <button onclick="setLayout(1, 3)">1×3 Vertical</button>
+            <button onclick="setLayout(3, 1)">3×1 Horizontal</button>
+            <button onclick="setLayout(2, 3)">2×3 Grid</button>
         </div>
         
         <!-- Preview Area -->
-        <div id="layoutPreview" class="layout-preview" style="display: none;">
-            <!-- Chart slots will be generated here -->
-        </div>
-        
-        <!-- Label Settings -->
-        <div class="label-settings" id="labelSettings" style="display: none;">
-            <h3>Label Settings</h3>
-            <div class="settings-row">
-                <label>
-                    Font Size: 
-                    <input type="range" id="labelFontSize" min="12" max="32" value="16">
-                    <span id="fontSizeValue">16px</span>
-                </label>
-                <label>
-                    Label Position: 
-                    <select id="labelPosition">
-                        <option value="bottom">Bottom</option>
-                        <option value="top">Top</option>
-                        <option value="overlay-bottom">Overlay Bottom</option>
-                        <option value="overlay-top">Overlay Top</option>
-                        <option value="none">No Labels</option>
-                    </select>
-                </label>
-            </div>
-            <div class="settings-row">
-                <label>
-                    Spacing: 
-                    <input type="range" id="gridSpacing" min="5" max="50" value="20">
-                    <span id="spacingValue">20px</span>
-                </label>
-                <label>
-                    Background: 
-                    <select id="backgroundColor">
-                        <option value="white">White</option>
-                        <option value="transparent">Transparent</option>
-                        <option value="light-gray">Light Gray</option>
-                        <option value="custom">Custom Color</option>
-                    </select>
-                    <input type="color" id="customBgColor" value="#ffffff" style="display: none;">
-                </label>
-            </div>
+        <div id="layoutPreview" style="display: none;">
+            <!-- Slots will be generated here -->
         </div>
         
         <!-- Controls -->
-        <div class="controls" id="controls" style="display: none;">
-            <button onclick="generateFinalImage()" id="generateBtn">Generate Final Image</button>
+        <div id="controls" style="display: none;">
+            <button onclick="generateImage()" id="generateBtn">Generate Final Image</button>
             <button onclick="downloadImage()" id="downloadBtn" disabled>Download PNG</button>
-            <button onclick="clearLayout()" class="secondary-btn">Clear Layout</button>
         </div>
         
-        <!-- Final Image Preview -->
+        <!-- Final Image -->
         <div id="finalImagePreview" style="display: none;">
-            <h3>Final Image Preview</h3>
-            <div class="canvas-container">
-                <canvas id="finalCanvas"></canvas>
-            </div>
+            <h3>Final Image:</h3>
+            <canvas id="finalCanvas"></canvas>
         </div>
     </div>
 
