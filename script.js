@@ -127,15 +127,19 @@ function createGrid() {
     const preview = document.getElementById('layoutPreview');
     if (!preview) return;
     
+    // Get spacing from slider for preview too!
+    const previewSpacing = document.getElementById('spacingSlider')?.value || 20;
+    
     preview.style.display = 'grid';
     preview.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
-    preview.style.gap = '20px';
+    preview.style.gap = previewSpacing + 'px'; // Use actual spacing
     preview.style.padding = '20px';
     preview.innerHTML = '';
     
     const totalSlots = currentCols * currentRows;
-    console.log(`📐 Creating ${totalSlots} slots in ${currentCols} x ${currentRows} grid`);
+    console.log(`📐 Creating ${totalSlots} slots with ${previewSpacing}px spacing`);
     
+    // ... rest of function stays the same
     for (let i = 0; i < totalSlots; i++) {
         const slot = document.createElement('div');
         slot.className = 'chart-slot';
@@ -162,6 +166,7 @@ function createGrid() {
         }
     });
 }
+
 
 function assignImage(slotIndex, imageIndex) {
     const slot = document.querySelector(`[data-slot="${slotIndex}"]`);
