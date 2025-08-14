@@ -492,72 +492,90 @@ function updateImageLabel(imageIndex, newLabel) {
 }
 
 function generateImage() {
-    console.log('Generating final image...');
+    console.log('🎨 Generating final image...');
     
     const canvas = document.getElementById('finalCanvas');
-    if (!canvas) {
-        console.error('Canvas not found!');
-        return;
-    }
+    if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
     
-    // Get settings with defaults
-    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
-    const fontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
-    const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
-    const backgroundType = document.getElementById('backgroundType')?.value || 'white';
+    // Get quality setting
+    const quality = document.getElementById('qualitySelect')?.value || 'large';
     
-    // Set canvas size
-    const cellWidth = 400;
-    const cellHeight = 300;
-    
-    canvas.width = (cellWidth * currentCols) + (spacing * (currentCols + 1));
-    canvas.height = (cellHeight * currentRows) + (spacing * (currentRows + 1));
-    
-    // Set background
-    if (backgroundType !== 'transparent') {
-        let bgColor = 'white';
-        if (backgroundType === 'light') bgColor = '#f5f5f5';
-        if (backgroundType === 'custom') bgColor = document.getElementById('customBgColor')?.value || 'white';
-        
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let cellW, cellH, spacing;
+    switch (quality) {
+        case 'small':  cellW = 400;  cellH = 300;  spacing = 20; break;
+        case 'medium': cellW = 800;  cellH = 600;  spacing = 25; break;
+        case 'large':  cellW = 1200; cellH = 900;  spacing = 30; break;
+        case 'xlarge': cellW = 1600; cellH = 1200; spacing = 40; break;
+        case 'ultra':  cellW = 2400; cellH = 1800; spacing = 50; break;
+        default:       cellW = 1200; cellH = 900;  spacing = 30;
     }
     
-    // Draw each assigned image
-    Object.keys(slotAssignments).forEach(slotIndex => {
-        const imageIndex = slotAssignments[slotIndex];
-        const img = uploadedImages[imageIndex];
+    console.log(`📐 Using ${cellW}×${cellH} per cell (${quality} quality)`);
+    
+    // Set canvas size
+    canvas.width = (cellW * grid.cols) + (spacing * (grid.cols + 1));
+    canvas.height = (cellH * grid.rows) + (spacing * (grid.rows + 1));
+    
+    console.log(`🖼️ Final canvas: ${canvas.width}×${canvas.height} pixels`);
+    
+    // White background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw each image
+    Object.keys(slots).forEach(slotIndex => {
+        const imageIndex = slots[slotIndex];
+        const img = images[imageIndex];
+        if (!img) return;
         
-        if (img) {
-            const row = Math.floor(slotIndex / currentCols);
-            const col = slotIndex % currentCols;
-            
-            const x = spacing + (col * (cellWidth + spacing));
-            const y = spacing + (row * (cellHeight + spacing));
-            
-            drawImageInCell(ctx, img, x, y, cellWidth, cellHeight, fontSize, labelPosition);
-        }
+        const row = Math.floor(slotIndex / grid.cols);
+        const col = slotIndex % grid.cols;
+        const x = spacing + (col * (cellW + spacing));
+        const y = spacing + (row * (cellH + spacing));
+        
+        // Draw image with better scaling
+        const padding = Math.max(20, cellW * 0.05); // Responsive padding
+        const fontSize = Math.max(16, cellW * 0.04); // Responsive font
+        const labelH = fontSize + 20;
+        const availW = cellW - (padding * 2);
+        const availH = cellH - (padding * 2) - labelH;
+        
+        // Calculate scale - this preserves original quality when possible
+        const scale = Math.min(availW / img.img.width, availH / img.img.height, 1); // Max scale = 1 (no upscaling)
+        const scaledW = img.img.width * scale;
+        const scaledH = img.img.height * scale;
+        
+        const imgX = x + padding + (availW - scaledW) / 2;
+        const imgY = y + padding + (availH - scaledH) / 2;
+        
+        // Use high-quality rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img.img, imgX, imgY, scaledW, scaledH);
+        
+        // Draw label with responsive font
+        ctx.fillStyle = 'black';
+        ctx.font = `${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(img.name, x + cellW / 2, y + cellH - padding/2);
+        
+        console.log(`✅ Drew ${img.name}: ${scaledW.toFixed(0)}×${scaledH.toFixed(0)} (scale: ${scale.toFixed(2)})`);
     });
     
     // Show result
-    const preview = document.getElementById('finalImagePreview');
-    if (preview) {
-        preview.style.display = 'block';
-        
-        // Enable download button
-        const downloadBtn = document.getElementById('downloadBtn');
-        if (downloadBtn) downloadBtn.disabled = false;
-        
-        console.log('Image generated!');
-        
-        // Scroll to preview
-        setTimeout(() => {
-            preview.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-    }
+    showElement('finalImagePreview');
+    document.getElementById('downloadBtn').disabled = false;
+    
+    console.log('✅ Image generated!');
+    
+    // Scroll to result
+    setTimeout(() => {
+        document.getElementById('finalImagePreview').scrollIntoView({ behavior: 'smooth' });
+    }, 100);
 }
+
 
 function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight, fontSize, labelPosition) {
     const padding = 20;
