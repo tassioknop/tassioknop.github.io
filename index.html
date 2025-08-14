@@ -203,6 +203,15 @@
                 <button onclick="downloadImage('jpg')" class="download-btn">📥 Download JPG</button>
                 <button onclick="copyToClipboard()" class="download-btn">📋 Copy to Clipboard</button>
             </div>
+            <script src='https://storage.ko-fi.com/cdn/scripts/overlay-widget.js'></script>
+            <script>
+              kofiWidgetOverlay.draw('tassio', {
+                'type': 'floating-chat',
+                'floating-chat.donateButton.text': 'Tip Me',
+                'floating-chat.donateButton.background-color': '#794bc4',
+                'floating-chat.donateButton.text-color': '#fff'
+              });
+            </script>
         </div>
     </div>
 
