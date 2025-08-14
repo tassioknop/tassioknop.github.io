@@ -135,4 +135,181 @@ function setLayout(cols, rows) {
 }
 
 function createLayoutSlots() {
-    const preview
+    const preview = document.getElementById('layoutPreview');
+    const totalSlots = currentCols * currentRows;
+    
+    console.log('Creating layout slots:', totalSlots); // Debug
+    
+    preview.innerHTML = '';
+    preview.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
+    preview.style.display = 'grid';
+    
+    for (let i = 0; i < totalSlots; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'chart-slot';
+        slot.dataset.slotIndex = i;
+        slot.innerHTML = `
+            <p>Slot ${i + 1}</p>
+            <select class="slot-select" onchange="assignImageToSlot(${i}, this.value)">
+                <option value="">Select image...</option>
+                ${uploadedImages.map((img, idx) => 
+                    `<option value="${idx}">${img.label}</option>`
+                ).join('')}
+            </select>
+        `;
+        
+        preview.appendChild(slot);
+    }
+}
+
+function autoAssignImages() {
+    console.log('Auto-assigning images...'); // Debug
+    
+    // Clear existing assignments
+    slotAssignments = {};
+    
+    // Assign images to slots
+    uploadedImages.forEach((img, index) => {
+        if (index < currentCols * currentRows) {
+            slotAssignments[index] = index;
+            assignImageToSlot(index, index, false); // false = don't log
+        }
+    });
+}
+
+function assignImageToSlot(slotIndex, imageIndex, shouldLog = true) {
+    if (shouldLog) console.log('Assigning image', imageIndex, 'to slot', slotIndex); // Debug
+    
+    const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+    const select = slot.querySelector('select');
+    
+    if (imageIndex === '' || imageIndex === null) {
+        // Clear slot
+        delete slotAssignments[slotIndex];
+        slot.className = 'chart-slot';
+        slot.innerHTML = `
+            <p>Slot ${parseInt(slotIndex) + 1}</p>
+            <select class="slot-select" onchange="assignImageToSlot(${slotIndex}, this.value)">
+                <option value="">Select image...</option>
+                ${uploadedImages.map((img, idx) => 
+                    `<option value="${idx}">${img.label}</option>`
+                ).join('')}
+            </select>
+        `;
+    } else {
+        // Assign image
+        const img = uploadedImages[imageIndex];
+        slotAssignments[slotIndex] = parseInt(imageIndex);
+        
+        slot.className = 'chart-slot has-image';
+        slot.innerHTML = `
+            <img src="${img.src}" alt="${img.label}">
+            <div class="chart-label">${img.label}</div>
+            <select class="slot-select" onchange="assignImageToSlot(${slotIndex}, this.value)">
+                <option value="">Remove image</option>
+                ${uploadedImages.map((img, idx) => 
+                    `<option value="${idx}" ${idx == imageIndex ? 'selected' : ''}>${img.label}</option>`
+                ).join('')}
+            </select>
+        `;
+    }
+}
+
+function updateImageLabel(imageIndex, newLabel) {
+    console.log('Updating label for image', imageIndex, 'to:', newLabel); // Debug
+    uploadedImages[imageIndex].label = newLabel;
+    
+    // Update any slots showing this image
+    Object.keys(slotAssignments).forEach(slotIndex => {
+        if (slotAssignments[slotIndex] === imageIndex) {
+            assignImageToSlot(slotIndex, imageIndex, false);
+        }
+    });
+    
+    // Update all select options
+    createLayoutSlots();
+    Object.keys(slotAssignments).forEach(slotIndex => {
+        assignImageToSlot(slotIndex, slotAssignments[slotIndex], false);
+    });
+}
+
+function generateImage() {
+    console.log('Generating final image...'); // Debug
+    
+    const canvas = document.getElementById('finalCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size
+    const cellWidth = 400;
+    const cellHeight = 300;
+    const spacing = 20;
+    
+    canvas.width = (cellWidth * currentCols) + (spacing * (currentCols + 1));
+    canvas.height = (cellHeight * currentRows) + (spacing * (currentRows + 1));
+    
+    // White background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw each assigned image
+    Object.keys(slotAssignments).forEach(slotIndex => {
+        const imageIndex = slotAssignments[slotIndex];
+        const img = uploadedImages[imageIndex];
+        
+        if (img) {
+            const row = Math.floor(slotIndex / currentCols);
+            const col = slotIndex % currentCols;
+            
+            const x = spacing + (col * (cellWidth + spacing));
+            const y = spacing + (row * (cellHeight + spacing));
+            
+            drawImageInCell(ctx, img, x, y, cellWidth, cellHeight);
+        }
+    });
+    
+    // Show result
+    document.getElementById('finalImagePreview').style.display = 'block';
+    document.getElementById('downloadBtn').disabled = false;
+    
+    console.log('Image generated!'); // Debug
+}
+
+function drawImageInCell(ctx, imgData, x, y, cellWidth, cellHeight) {
+    const padding = 20;
+    const labelHeight = 30;
+    
+    const availableWidth = cellWidth - (padding * 2);
+    const availableHeight = cellHeight - (padding * 2) - labelHeight;
+    
+    // Calculate scaling
+    const scale = Math.min(
+        availableWidth / imgData.image.width,
+        availableHeight / imgData.image.height
+    );
+    
+    const scaledWidth = imgData.image.width * scale;
+    const scaledHeight = imgData.image.height * scale;
+    
+    // Center the image
+    const imageX = x + padding + (availableWidth - scaledWidth) / 2;
+    const imageY = y + padding + (availableHeight - scaledHeight) / 2;
+    
+    // Draw image
+    ctx.drawImage(imgData.image, imageX, imageY, scaledWidth, scaledHeight);
+    
+    // Draw label
+    ctx.fillStyle = 'black';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(imgData.label, x + cellWidth / 2, y + cellHeight - 10);
+}
+
+function downloadImage() {
+    console.log('Downloading image...'); // Debug
+    
+    const canvas = document.getElementById('finalCanvas');
+    const link = document.createElement('a');
+    link.download = `chart-layout-${currentCols}x${currentRows}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
