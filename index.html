@@ -1,50 +1,34 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chart Layout Tool</title>
-    <style>
-        .layout-preview {
-            display: grid;
-            gap: 10px;
-            border: 2px dashed #ccc;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        
-        .layout-grid-2x2 { grid-template-columns: 1fr 1fr; }
-        .layout-grid-1x3 { grid-template-columns: 1fr; }
-        .layout-grid-3x1 { grid-template-columns: 1fr 1fr 1fr; }
-        
-        .chart-slot {
-            border: 1px solid #ddd;
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        
-        .chart-slot img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
         <h1>Chart Layout Tool</h1>
         
         <!-- File Upload -->
-        <input type="file" id="imageUpload" multiple accept="image/*">
+        <div class="upload-section">
+            <input type="file" id="imageUpload" multiple accept="image/*">
+            <p>Upload your chart images</p>
+        </div>
+        
+        <!-- Uploaded Images Preview with Labels -->
+        <div id="uploadedImagesSection" class="uploaded-images" style="display: none;">
+            <h3>Uploaded Images</h3>
+            <div id="uploadedImagesList"></div>
+        </div>
         
         <!-- Layout Selection -->
-        <div>
+        <div class="layout-selection">
             <h3>Choose Layout:</h3>
             <button onclick="setLayout('2x2')">2x2 Grid</button>
             <button onclick="setLayout('1x3')">1x3 Vertical</button>
             <button onclick="setLayout('3x1')">3x1 Horizontal</button>
-            <button onclick="setLayout('custom')">Custom</button>
+            <button onclick="setLayout('2x3')">2x3 Grid</button>
         </div>
         
         <!-- Preview Area -->
@@ -52,14 +36,36 @@
             <!-- Chart slots will be generated here -->
         </div>
         
-        <!-- Controls -->
-        <div>
-            <button onclick="generateFinalImage()">Generate Final Image</button>
-            <button onclick="downloadImage()">Download</button>
+        <!-- Label Settings -->
+        <div class="label-settings">
+            <h3>Label Settings</h3>
+            <label>
+                Font Size: 
+                <input type="range" id="labelFontSize" min="12" max="24" value="16">
+                <span id="fontSizeValue">16px</span>
+            </label>
+            <label>
+                Label Position: 
+                <select id="labelPosition">
+                    <option value="top">Top</option>
+                    <option value="bottom">Bottom</option>
+                    <option value="overlay-top">Overlay Top</option>
+                    <option value="overlay-bottom">Overlay Bottom</option>
+                </select>
+            </label>
         </div>
         
-        <!-- Hidden canvas for final image generation -->
-        <canvas id="finalCanvas" style="display: none;"></canvas>
+        <!-- Controls -->
+        <div class="controls">
+            <button onclick="generateFinalImage()" id="generateBtn" disabled>Generate Final Image</button>
+            <button onclick="downloadImage()" id="downloadBtn" disabled>Download PNG</button>
+        </div>
+        
+        <!-- Final Image Preview -->
+        <div id="finalImagePreview" style="display: none;">
+            <h3>Final Image Preview</h3>
+            <canvas id="finalCanvas"></canvas>
+        </div>
     </div>
 
     <script src="script.js"></script>
