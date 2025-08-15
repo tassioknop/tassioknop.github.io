@@ -16,13 +16,13 @@ let currentCols = 2;
 let currentRows = 2;
 let slots = {};
 
-console.log('🚀 Chart Layout Tool loaded!');
-
 // Interactive Canvas Variables
 let fabricCanvas = null;
 let canvasObjects = []; // Track our image objects
 let gridLines = [];
 let showGrid = false;
+
+console.log('🚀 Chart Layout Tool loaded!');
 
 // Initialize Fabric Canvas
 function initializeCanvas() {
@@ -162,42 +162,76 @@ function positionLabel(label, image, position) {
         case 'top':
             labelLeft = imageLeft + imageWidth / 2;
             labelTop = imageTop - 25;
-            label.set({ textAlign: 'center', originX: 'center' });
+            label.set({ 
+                textAlign: 'center', 
+                originX: 'center',
+                textBaseline: 'alphabetic' // Fix: use valid textBaseline
+            });
             break;
         case 'top-left':
             labelLeft = imageLeft;
             labelTop = imageTop - 25;
-            label.set({ textAlign: 'left', originX: 'left' });
+            label.set({ 
+                textAlign: 'left', 
+                originX: 'left',
+                textBaseline: 'alphabetic'
+            });
             break;
         case 'top-right':
             labelLeft = imageLeft + imageWidth;
             labelTop = imageTop - 25;
-            label.set({ textAlign: 'right', originX: 'right' });
+            label.set({ 
+                textAlign: 'right', 
+                originX: 'right',
+                textBaseline: 'alphabetic'
+            });
             break;
         case 'bottom':
             labelLeft = imageLeft + imageWidth / 2;
             labelTop = imageTop + imageHeight + 20;
-            label.set({ textAlign: 'center', originX: 'center' });
+            label.set({ 
+                textAlign: 'center', 
+                originX: 'center',
+                textBaseline: 'alphabetic'
+            });
             break;
         case 'bottom-left':
             labelLeft = imageLeft;
             labelTop = imageTop + imageHeight + 20;
-            label.set({ textAlign: 'left', originX: 'left' });
+            label.set({ 
+                textAlign: 'left', 
+                originX: 'left',
+                textBaseline: 'alphabetic'
+            });
             break;
         case 'bottom-right':
             labelLeft = imageLeft + imageWidth;
             labelTop = imageTop + imageHeight + 20;
-            label.set({ textAlign: 'right', originX: 'right' });
+            label.set({ 
+                textAlign: 'right', 
+                originX: 'right',
+                textBaseline: 'alphabetic'
+            });
             break;
         case 'left':
             labelLeft = imageLeft - 10;
             labelTop = imageTop + imageHeight / 2;
-            label.set({ textAlign: 'right', originX: 'right', originY: 'center' });
+            label.set({ 
+                textAlign: 'right', 
+                originX: 'right', 
+                originY: 'center',
+                textBaseline: 'alphabetic'
+            });
             break;
         case 'right':
             labelLeft = imageLeft + imageWidth + 10;
             labelTop = imageTop + imageHeight / 2;
-            label.set({ textAlign: 'left', originX: 'left', originY: 'center' });
+            label.set({ 
+                textAlign: 'left', 
+                originX: 'left', 
+                originY: 'center',
+                textBaseline: 'alphabetic'
+            });
             break;
         case 'overlay':
             labelLeft = imageLeft + imageWidth / 2;
@@ -207,7 +241,8 @@ function positionLabel(label, image, position) {
                 originX: 'center',
                 backgroundColor: 'rgba(0,0,0,0.8)',
                 fill: 'white',
-                padding: 5
+                padding: 5,
+                textBaseline: 'alphabetic'
             });
             break;
     }
@@ -215,34 +250,61 @@ function positionLabel(label, image, position) {
     label.set({ left: labelLeft, top: labelTop });
 }
 
-// Event handlers
-function onObjectModified(e) {
-    const obj = e.target;
-    if (obj.label) {
-        const position = document.getElementById('labelPosition')?.value || 'bottom';
-        positionLabel(obj.label, obj, position);
-        fabricCanvas.renderAll();
-    }
-}
 
-function onObjectMoving(e) {
-    // Update label position while dragging
-    onObjectModified(e);
-}
 
-function onDoubleClick(e) {
-    const obj = e.target;
-    if (obj && obj.imageData) {
-        const newName = prompt('Enter new label:', obj.imageData.name);
-        if (newName && newName.trim()) {
-            obj.imageData.name = newName.trim();
-            if (obj.label) {
-                obj.label.set('text', newName.trim());
-                fabricCanvas.renderAll();
-            }
+function autoArrangeImages() {
+    if (!fabricCanvas) return;
+    
+    const canvasWidth = fabricCanvas.getWidth();
+    const canvasHeight = fabricCanvas.getHeight();
+    const objects = canvasObjects;
+    
+    if (objects.length === 0) return;
+    
+    // Get current spacing setting
+    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    
+    const cols = Math.ceil(Math.sqrt(objects.length));
+    const rows = Math.ceil(objects.length / cols);
+    
+    const cellWidth = (canvasWidth - (spacing * (cols + 1))) / cols;
+    const cellHeight = (canvasHeight - (spacing * (rows + 1))) / rows;
+    
+    objects.forEach((obj, index) => {
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+        
+        const x = spacing + (col * (cellWidth + spacing));
+        const y = spacing + (row * (cellHeight + spacing));
+        
+        // Calculate max size for this cell
+        const maxWidth = cellWidth - (spacing * 0.5);
+        const maxHeight = cellHeight - (spacing * 0.5);
+        
+        // Scale to fit cell with spacing
+        const scale = Math.min(
+            maxWidth / obj.width,
+            maxHeight / obj.height,
+            1
+        );
+        
+        obj.set({ 
+            left: x, 
+            top: y,
+            scaleX: scale,
+            scaleY: scale
+        });
+        
+        if (obj.label) {
+            const position = document.getElementById('labelPosition')?.value || 'bottom';
+            positionLabel(obj.label, obj, position);
         }
-    }
+    });
+    
+    fabricCanvas.renderAll();
+    console.log(`📐 Auto-arranged with ${spacing}px spacing`);
 }
+
 
 // Canvas control functions
 // Arrange images in specific grid layout on canvas
@@ -318,9 +380,37 @@ function updateAllCanvasLabels() {
 }
 
 
-function resetCanvasLayout() {
-    addImagesToCanvas();
+// Event handlers
+function onObjectModified(e) {
+    const obj = e.target;
+    if (obj.label) {
+        const position = document.getElementById('labelPosition')?.value || 'bottom';
+        positionLabel(obj.label, obj, position);
+        fabricCanvas.renderAll();
+    }
 }
+
+
+function onObjectMoving(e) {
+    // Update label position while dragging
+    onObjectModified(e);
+}
+
+
+function onDoubleClick(e) {
+    const obj = e.target;
+    if (obj && obj.imageData) {
+        const newName = prompt('Enter new label:', obj.imageData.name);
+        if (newName && newName.trim()) {
+            obj.imageData.name = newName.trim();
+            if (obj.label) {
+                obj.label.set('text', newName.trim());
+                fabricCanvas.renderAll();
+            }
+        }
+    }
+}
+
 
 function addGridLines() {
     // Toggle grid implementation
@@ -366,6 +456,9 @@ function addGridLines() {
     fabricCanvas.renderAll();
 }
 
+function resetCanvasLayout() {
+    addImagesToCanvas();
+}
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', function() {
@@ -501,58 +594,7 @@ function processRegularImage(file, index, callback) {
     reader.readAsDataURL(file);
 }
 
-function autoArrangeImages() {
-    if (!fabricCanvas) return;
-    
-    const canvasWidth = fabricCanvas.getWidth();
-    const canvasHeight = fabricCanvas.getHeight();
-    const objects = canvasObjects;
-    
-    if (objects.length === 0) return;
-    
-    // Get current spacing setting
-    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
-    
-    const cols = Math.ceil(Math.sqrt(objects.length));
-    const rows = Math.ceil(objects.length / cols);
-    
-    const cellWidth = (canvasWidth - (spacing * (cols + 1))) / cols;
-    const cellHeight = (canvasHeight - (spacing * (rows + 1))) / rows;
-    
-    objects.forEach((obj, index) => {
-        const row = Math.floor(index / cols);
-        const col = index % cols;
-        
-        const x = spacing + (col * (cellWidth + spacing));
-        const y = spacing + (row * (cellHeight + spacing));
-        
-        // Calculate max size for this cell
-        const maxWidth = cellWidth - (spacing * 0.5);
-        const maxHeight = cellHeight - (spacing * 0.5);
-        
-        // Scale to fit cell with spacing
-        const scale = Math.min(
-            maxWidth / obj.width,
-            maxHeight / obj.height,
-            1
-        );
-        
-        obj.set({ 
-            left: x, 
-            top: y,
-            scaleX: scale,
-            scaleY: scale
-        });
-        
-        if (obj.label) {
-            const position = document.getElementById('labelPosition')?.value || 'bottom';
-            positionLabel(obj.label, obj, position);
-        }
-    });
-    
-    fabricCanvas.renderAll();
-    console.log(`📐 Auto-arranged with ${spacing}px spacing`);
-}
+
 
 
 // Process PDF files
