@@ -446,12 +446,18 @@ function assignImage(slotIndex, imageIndex) {
         slot.className = 'chart-slot';
         slot.innerHTML = '';
         
-        slot.appendChild(slotNumber);
+        // Re-add slot number
+        const newSlotNumber = document.createElement('div');
+        newSlotNumber.className = 'slot-number';
+        newSlotNumber.textContent = parseInt(slotIndex) + 1;
+        slot.appendChild(newSlotNumber);
         
+        // Add empty slot content
         const content = document.createElement('p');
         content.textContent = `Slot ${parseInt(slotIndex) + 1}`;
         slot.appendChild(content);
         
+        // Add select dropdown
         const select = document.createElement('select');
         select.innerHTML = `
             <option value="">Select image...</option>
@@ -466,22 +472,78 @@ function assignImage(slotIndex, imageIndex) {
         slot.className = 'chart-slot has-image';
         slot.innerHTML = '';
         
-        slot.appendChild(slotNumber);
+        // Re-add slot number
+        const newSlotNumber = document.createElement('div');
+        newSlotNumber.className = 'slot-number';
+        newSlotNumber.textContent = parseInt(slotIndex) + 1;
+        slot.appendChild(newSlotNumber);
         
+        // Add image
         const imgElement = document.createElement('img');
         imgElement.src = img.src;
         imgElement.alt = img.name;
         slot.appendChild(imgElement);
         
+        // Add label with position preview
         const label = document.createElement('div');
-        label.style.cssText = `
-            position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); 
-            background: rgba(0,0,0,0.8); color: white; padding: 4px 8px; border-radius: 4px; 
-            font-size: 12px; max-width: calc(100% - 10px); text-align: center;
+        const position = document.getElementById('labelPosition')?.value || 'bottom';
+        
+        // Set different styles based on selected position
+        let labelStyle = `
+            position: absolute; 
+            background: rgba(0,0,0,0.8); 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            max-width: calc(100% - 10px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 2;
         `;
+        
+        switch (position) {
+            case 'top':
+                labelStyle += `top: 30px; left: 50%; transform: translateX(-50%); text-align: center;`;
+                break;
+            case 'top-left':
+                labelStyle += `top: 30px; left: 10px; text-align: left;`;
+                break;
+            case 'top-right':
+                labelStyle += `top: 30px; right: 10px; text-align: right;`;
+                break;
+            case 'bottom':
+                labelStyle += `bottom: 45px; left: 50%; transform: translateX(-50%); text-align: center;`;
+                break;
+            case 'bottom-left':
+                labelStyle += `bottom: 45px; left: 10px; text-align: left;`;
+                break;
+            case 'bottom-right':
+                labelStyle += `bottom: 45px; right: 10px; text-align: right;`;
+                break;
+            case 'left':
+                labelStyle += `top: 50%; left: 10px; transform: translateY(-50%); text-align: left;`;
+                break;
+            case 'right':
+                labelStyle += `top: 50%; right: 10px; transform: translateY(-50%); text-align: right;`;
+                break;
+            case 'overlay':
+                labelStyle += `bottom: 60px; left: 50%; transform: translateX(-50%); text-align: center;`;
+                break;
+            case 'none':
+                labelStyle += `display: none;`;
+                break;
+            default:
+                labelStyle += `bottom: 45px; left: 50%; transform: translateX(-50%); text-align: center;`;
+        }
+        
+        label.style.cssText = labelStyle;
         label.textContent = img.name;
+        label.className = 'chart-preview-label';
         slot.appendChild(label);
         
+        // Add select dropdown
         const select = document.createElement('select');
         select.innerHTML = `
             <option value="">Remove image</option>
@@ -489,8 +551,11 @@ function assignImage(slotIndex, imageIndex) {
         `;
         select.onchange = (e) => assignImage(slotIndex, e.target.value);
         slot.appendChild(select);
+        
+        console.log(`✅ Assigned ${img.name} to slot ${slotIndex} with ${position} label preview`);
     }
 }
+
 
 // Rename image
 function renameImage(index, newName) {
@@ -636,28 +701,39 @@ function generateImage() {
 
 // Draw image with label
 function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, fontSize) {
-    // Get user's spacing setting for internal padding too
     const userSpacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    const layoutStyle = document.getElementById('layoutStyle')?.value || 'normal';
     
-    // Make internal padding responsive to user's spacing choice
-    const padding = Math.max(userSpacing, cellW * 0.02); // Reduced from 0.05 to 0.02
+    let padding;
+    switch (layoutStyle) {
+        case 'tight':
+            padding = Math.max(userSpacing / 2, 5);
+            break;
+        case 'touching':
+            padding = 2;
+            break;
+        default:
+            padding = Math.max(userSpacing, cellW * 0.02);
+    }
+    
     const labelHeight = fontSize + 10;
     
     console.log(`🖼️ Drawing ${img.name} with ${fontSize}px font at ${labelPosition} (padding: ${padding}px)`);
     
-    // Calculate available space
+    // Calculate available space based on label position
     let imageX = x + padding;
     let imageY = y + padding;
     let availableWidth = cellW - (padding * 2);
     let availableHeight = cellH - (padding * 2);
     
-    // Adjust for label position
-    if (labelPosition === 'top') {
-        imageY += labelHeight + 10;
-        availableHeight -= (labelHeight + 10);
-    } else if (labelPosition === 'bottom') {
-        availableHeight -= (labelHeight + 10);
+    // Adjust image area for top/bottom labels (they need reserved space)
+    if (labelPosition.startsWith('top')) {
+        imageY += labelHeight + 5;
+        availableHeight -= (labelHeight + 5);
+    } else if (labelPosition.startsWith('bottom') && labelPosition !== 'bottom-left' && labelPosition !== 'bottom-right') {
+        availableHeight -= (labelHeight + 5);
     }
+    // Left/right/overlay labels don't need reserved space - they overlap or use margins
     
     // Calculate scaling
     const scale = Math.min(
@@ -669,7 +745,7 @@ function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, fontSiz
     const scaledWidth = img.img.width * scale;
     const scaledHeight = img.img.height * scale;
     
-    // Center the image
+    // Center the image in available space
     const centeredImageX = imageX + (availableWidth - scaledWidth) / 2;
     const centeredImageY = imageY + (availableHeight - scaledHeight) / 2;
     
@@ -678,47 +754,121 @@ function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, fontSiz
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img.img, centeredImageX, centeredImageY, scaledWidth, scaledHeight);
     
-    // Draw label
+    // Draw label in the specified position
     if (labelPosition !== 'none') {
-        ctx.font = `${fontSize}px Arial`;
-        ctx.textAlign = 'center';
-        
-        const labelX = x + cellW / 2;
-        let labelY;
-        
-        switch (labelPosition) {
-            case 'top':
-                ctx.fillStyle = 'black';
-                labelY = y + padding + fontSize;
-                break;
-                
-            case 'bottom':
-                ctx.fillStyle = 'black';
-                labelY = y + cellH - padding;
-                break;
-                
-            case 'overlay':
-                labelY = centeredImageY + scaledHeight - 15;
-                const textWidth = ctx.measureText(img.name).width;
-                
-                // Background
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillRect(
-                    labelX - textWidth/2 - 10, 
-                    labelY - fontSize - 5, 
-                    textWidth + 20, 
-                    fontSize + 10
-                );
-                
-                // Text
-                ctx.fillStyle = 'white';
-                break;
-        }
-        
-        ctx.fillText(img.name, labelX, labelY);
-        console.log(`📝 Drew label "${img.name}" at ${labelPosition} with ${padding}px internal padding`);
+        drawLabelAtPosition(ctx, img.name, x, y, cellW, cellH, labelPosition, fontSize, padding, centeredImageX, centeredImageY, scaledWidth, scaledHeight);
     }
 }
+
+function drawLabelAtPosition(ctx, labelText, x, y, cellW, cellH, position, fontSize, padding, imageX, imageY, imageWidth, imageHeight) {
+    ctx.font = `${fontSize}px Arial`;
+    
+    let labelX, labelY, textAlign = 'center';
+    let needsBackground = false;
+    
+    switch (position) {
+        case 'top':
+            labelX = x + cellW / 2;
+            labelY = y + padding + fontSize;
+            textAlign = 'center';
+            break;
+            
+        case 'top-left':
+            labelX = x + padding;
+            labelY = y + padding + fontSize;
+            textAlign = 'left';
+            break;
+            
+        case 'top-right':
+            labelX = x + cellW - padding;
+            labelY = y + padding + fontSize;
+            textAlign = 'right';
+            break;
+            
+        case 'bottom':
+            labelX = x + cellW / 2;
+            labelY = y + cellH - padding;
+            textAlign = 'center';
+            break;
+            
+        case 'bottom-left':
+            labelX = x + padding;
+            labelY = y + cellH - padding;
+            textAlign = 'left';
+            break;
+            
+        case 'bottom-right':
+            labelX = x + cellW - padding;
+            labelY = y + cellH - padding;
+            textAlign = 'right';
+            break;
+            
+        case 'left':
+            labelX = x + padding;
+            labelY = y + cellH / 2 + fontSize / 2; // Vertically centered
+            textAlign = 'left';
+            needsBackground = true; // Overlaps image
+            break;
+            
+        case 'right':
+            labelX = x + cellW - padding;
+            labelY = y + cellH / 2 + fontSize / 2; // Vertically centered
+            textAlign = 'right';
+            needsBackground = true; // Overlaps image
+            break;
+            
+        case 'overlay':
+            labelX = x + cellW / 2;
+            labelY = imageY + imageHeight - 10;
+            textAlign = 'center';
+            needsBackground = true;
+            break;
+            
+        default:
+            return; // Unknown position
+    }
+    
+    ctx.textAlign = textAlign;
+    
+    // Draw background for overlapping labels
+    if (needsBackground) {
+        const textWidth = ctx.measureText(labelText).width;
+        const backgroundPadding = 8;
+        
+        let bgX, bgWidth;
+        if (textAlign === 'left') {
+            bgX = labelX - backgroundPadding;
+            bgWidth = textWidth + (backgroundPadding * 2);
+        } else if (textAlign === 'right') {
+            bgX = labelX - textWidth - backgroundPadding;
+            bgWidth = textWidth + (backgroundPadding * 2);
+        } else { // center
+            bgX = labelX - textWidth/2 - backgroundPadding;
+            bgWidth = textWidth + (backgroundPadding * 2);
+        }
+        
+        // Semi-transparent background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(
+            bgX,
+            labelY - fontSize - 4,
+            bgWidth,
+            fontSize + 8
+        );
+        
+        // White text on background
+        ctx.fillStyle = 'white';
+    } else {
+        // Black text on transparent background
+        ctx.fillStyle = 'black';
+    }
+    
+    // Draw the text
+    ctx.fillText(labelText, labelX, labelY);
+    
+    console.log(`📝 Drew label "${labelText}" at ${position} (${labelX.toFixed(0)}, ${labelY.toFixed(0)}) with ${textAlign} alignment`);
+}
+
 
 
 // Download functions
