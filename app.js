@@ -1,0 +1,773 @@
+// Chart Layout Tool
+// Configure PDF.js
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// Global variables
+let images = [];
+let currentCols = 2;
+let currentRows = 2;
+let slots = {};
+
+console.log('🚀 Chart Layout Tool loaded!');
+
+// Initialize application
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📋 DOM loaded!');
+    
+    const fileInput = document.getElementById('imageUpload');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFiles);
+        console.log('✅ File input ready');
+    }
+    
+    setupEventListeners();
+    showElement('debug');
+});
+
+// Setup event listeners for controls
+function setupEventListeners() {
+    // Spacing slider
+    const spacingSlider = document.getElementById('spacingSlider');
+    const spacingValue = document.getElementById('spacingValue');
+    if (spacingSlider && spacingValue) {
+        spacingSlider.addEventListener('input', (e) => {
+            spacingValue.textContent = e.target.value + 'px';
+            updatePreviewSpacing(e.target.value);
+        });
+    }
+    
+    // Font slider
+    const fontSlider = document.getElementById('fontSlider');
+    const fontValue = document.getElementById('fontValue');
+    if (fontSlider && fontValue) {
+        fontSlider.addEventListener('input', (e) => {
+            fontValue.textContent = e.target.value + 'px';
+        });
+    }
+    
+    // Background type
+    const backgroundType = document.getElementById('backgroundType');
+    const customBgColor = document.getElementById('customBgColor');
+    if (backgroundType && customBgColor) {
+        backgroundType.addEventListener('change', (e) => {
+            customBgColor.style.display = e.target.value === 'custom' ? 'inline' : 'none';
+        });
+    }
+}
+
+// Update preview spacing in real-time
+function updatePreviewSpacing(spacing) {
+    const preview = document.getElementById('layoutPreview');
+    if (preview) {
+        preview.style.gap = spacing + 'px';
+    }
+}
+
+// Handle file uploads
+function handleFiles(event) {
+    const files = Array.from(event.target.files);
+    console.log(`📁 Processing ${files.length} files`);
+    
+    updateDebug(`Processing ${files.length} files...`);
+    
+    let processedCount = 0;
+    const totalFiles = files.length;
+    
+    files.forEach((file, index) => {
+        const fileName = file.name.toLowerCase();
+        
+        console.log(`🔍 Processing: ${file.name} (${file.type})`);
+        
+        if (fileName.endsWith('.pdf')) {
+            processPDF(file, index, () => {
+                processedCount++;
+                updateProgress(processedCount, totalFiles);
+            });
+        } else if (fileName.endsWith('.tiff') || fileName.endsWith('.tif')) {
+            processTIFF(file, index, () => {
+                processedCount++;
+                updateProgress(processedCount, totalFiles);
+            });
+        } else {
+            processRegularImage(file, index, () => {
+                processedCount++;
+                updateProgress(processedCount, totalFiles);
+            });
+        }
+    });
+}
+
+// Update processing progress
+function updateProgress(processed, total) {
+    updateDebug(`Processed ${processed}/${total} files...`);
+    
+    if (processed === total) {
+        console.log('✅ All files processed!');
+        showImages();
+        showControls();
+        autoSetLayout();
+    }
+}
+
+// Process regular image files
+function processRegularImage(file, index, callback) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            images.push({
+                id: Date.now() + index,
+                src: e.target.result,
+                img: img,
+                name: file.name.replace(/\.[^/.]+$/, ""),
+                file: file.name,
+                type: 'image'
+            });
+            
+            console.log(`✅ Image processed: ${file.name}`);
+            callback();
+        };
+        img.onerror = function() {
+            console.error(`❌ Failed to load image: ${file.name}`);
+            callback();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Process PDF files
+function processPDF(file, index, callback) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            console.log(`📄 Converting PDF: ${file.name}`);
+            
+            const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
+            console.log(`📖 PDF has ${pdf.numPages} pages`);
+            
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 2.0 });
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            
+            const img = new Image();
+            img.onload = function() {
+                images.push({
+                    id: Date.now() + index,
+                    src: canvas.toDataURL('image/png'),
+                    img: img,
+                    name: file.name.replace(/\.[^/.]+$/, "") + " (Page 1)",
+                    file: file.name,
+                    type: 'pdf',
+                    pages: pdf.numPages
+                });
+                
+                console.log(`✅ PDF processed: ${file.name} (${pdf.numPages} pages)`);
+                callback();
+            };
+            img.src = canvas.toDataURL('image/png');
+            
+        } catch (error) {
+            console.error(`❌ Failed to process PDF ${file.name}:`, error);
+            callback();
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Process TIFF files
+function processTIFF(file, index, callback) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            console.log(`🖼️ Converting TIFF: ${file.name}`);
+            
+            const tiff = new Tiff({ buffer: e.target.result });
+            const canvas = tiff.toCanvas();
+            
+            const img = new Image();
+            img.onload = function() {
+                images.push({
+                    id: Date.now() + index,
+                    src: canvas.toDataURL('image/png'),
+                    img: img,
+                    name: file.name.replace(/\.[^/.]+$/, ""),
+                    file: file.name,
+                    type: 'tiff'
+                });
+                
+                console.log(`✅ TIFF processed: ${file.name}`);
+                callback();
+            };
+            img.src = canvas.toDataURL('image/png');
+            
+        } catch (error) {
+            console.error(`❌ Failed to process TIFF ${file.name}:`, error);
+            callback();
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Display uploaded images
+function showImages() {
+    const section = document.getElementById('uploadedImagesSection');
+    const list = document.getElementById('uploadedImagesList');
+    const count = document.getElementById('imageCount');
+    
+    console.log('✅ Updating images list, count:', images.length);
+    
+    if (!section || !list) return;
+    
+    section.style.display = 'block';
+    section.classList.add('fade-in');
+    if (count) count.textContent = `(${images.length} images)`;
+    
+    list.innerHTML = '';
+    images.forEach((img, i) => {
+        const typeIcon = getTypeIcon(img.type);
+        const extraInfo = img.pages ? ` • ${img.pages} pages` : '';
+        
+        const div = document.createElement('div');
+        div.className = 'uploaded-image-card';
+        div.innerHTML = `
+            <img src="${img.src}" alt="${img.name}">
+            <div class="image-info">
+                <input type="text" value="${img.name}" onchange="renameImage(${i}, this.value)" 
+                       placeholder="Enter chart label...">
+                <small style="color: #666; display: block; margin-top: 8px;">
+                    ${typeIcon} ${img.file}${extraInfo}
+                </small>
+            </div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// Get type icon for display
+function getTypeIcon(type) {
+    switch (type) {
+        case 'pdf': return '📄 PDF';
+        case 'tiff': return '🖼️ TIFF';
+        default: return '🖼️ Image';
+    }
+}
+
+// Show control sections
+function showControls() {
+    console.log('✅ Showing sections...');
+    const sections = ['layoutConfig', 'instructions', 'advancedControls', 'controls'];
+    sections.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.style.display = 'block';
+            element.classList.add('fade-in');
+            console.log('✅ Showed section:', id);
+        }
+    });
+    
+    updateAutoLayoutInfo();
+}
+
+// Utility function to show elements
+function showElement(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.display = 'block';
+        console.log('✅ Showed element:', id);
+    }
+}
+
+// Update debug display
+function updateDebug(text) {
+    const debug = document.getElementById('debugText');
+    if (debug) debug.textContent = text;
+}
+
+// Auto-set optimal layout
+function autoSetLayout() {
+    const count = images.length;
+    console.log('🔧 Auto-setting layout for', count, 'images');
+    
+    if (count <= 1) { currentCols = 1; currentRows = 1; }
+    else if (count <= 2) { currentCols = 2; currentRows = 1; }
+    else if (count <= 4) { currentCols = 2; currentRows = 2; }
+    else if (count <= 6) { currentCols = 3; currentRows = 2; }
+    else if (count <= 9) { currentCols = 3; currentRows = 3; }
+    else if (count <= 12) { currentCols = 4; currentRows = 3; }
+    else { currentCols = 4; currentRows = 4; }
+    
+    createGrid();
+}
+
+// Create layout grid
+function createGrid() {
+    console.log(`🔧 Creating ${currentCols}x${currentRows} grid`);
+    
+    const preview = document.getElementById('layoutPreview');
+    if (!preview) return;
+    
+    const spacing = document.getElementById('spacingSlider')?.value || 20;
+    
+    preview.style.display = 'grid';
+    preview.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
+    preview.style.gap = spacing + 'px';
+    preview.innerHTML = '';
+    preview.classList.add('fade-in');
+    
+    const totalSlots = currentCols * currentRows;
+    console.log(`📐 Creating ${totalSlots} slots with ${spacing}px spacing`);
+    
+    for (let i = 0; i < totalSlots; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'chart-slot';
+        slot.dataset.slot = i;
+        
+        const slotNumber = document.createElement('div');
+        slotNumber.className = 'slot-number';
+        slotNumber.textContent = i + 1;
+        slot.appendChild(slotNumber);
+        
+        const content = document.createElement('p');
+        content.textContent = `Slot ${i + 1}`;
+        slot.appendChild(content);
+        
+        const select = document.createElement('select');
+        select.innerHTML = `
+            <option value="">Select image...</option>
+            ${images.map((img, idx) => `<option value="${idx}">${img.name}</option>`).join('')}
+        `;
+        select.onchange = (e) => assignImage(i, e.target.value);
+        slot.appendChild(select);
+        
+        preview.appendChild(slot);
+    }
+    
+    // Auto-assign images
+    console.log('🎯 Auto-assigning images...');
+    images.forEach((img, i) => {
+        if (i < totalSlots) {
+            slots[i] = i;
+            assignImage(i, i);
+        }
+    });
+}
+
+// Assign image to slot
+function assignImage(slotIndex, imageIndex) {
+    const slot = document.querySelector(`[data-slot="${slotIndex}"]`);
+    if (!slot) return;
+    
+    const slotNumber = slot.querySelector('.slot-number');
+    
+    if (imageIndex === '' || imageIndex < 0) {
+        // Clear slot
+        delete slots[slotIndex];
+        slot.className = 'chart-slot';
+        slot.innerHTML = '';
+        
+        slot.appendChild(slotNumber);
+        
+        const content = document.createElement('p');
+        content.textContent = `Slot ${parseInt(slotIndex) + 1}`;
+        slot.appendChild(content);
+        
+        const select = document.createElement('select');
+        select.innerHTML = `
+            <option value="">Select image...</option>
+            ${images.map((img, idx) => `<option value="${idx}">${img.name}</option>`).join('')}
+        `;
+        select.onchange = (e) => assignImage(slotIndex, e.target.value);
+        slot.appendChild(select);
+    } else {
+        // Assign image
+        const img = images[imageIndex];
+        slots[slotIndex] = parseInt(imageIndex);
+        slot.className = 'chart-slot has-image';
+        slot.innerHTML = '';
+        
+        slot.appendChild(slotNumber);
+        
+        const imgElement = document.createElement('img');
+        imgElement.src = img.src;
+        imgElement.alt = img.name;
+        slot.appendChild(imgElement);
+        
+        const label = document.createElement('div');
+        label.style.cssText = `
+            position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); 
+            background: rgba(0,0,0,0.8); color: white; padding: 4px 8px; border-radius: 4px; 
+            font-size: 12px; max-width: calc(100% - 10px); text-align: center;
+        `;
+        label.textContent = img.name;
+        slot.appendChild(label);
+        
+        const select = document.createElement('select');
+        select.innerHTML = `
+            <option value="">Remove image</option>
+            ${images.map((img, idx) => `<option value="${idx}" ${idx == imageIndex ? 'selected' : ''}>${img.name}</option>`).join('')}
+        `;
+        select.onchange = (e) => assignImage(slotIndex, e.target.value);
+        slot.appendChild(select);
+    }
+}
+
+// Rename image
+function renameImage(index, newName) {
+    if (images[index]) {
+        images[index].name = newName;
+        createGrid(); // Refresh to show new names
+    }
+}
+
+// Set specific layout
+function setLayout(cols, rows) {
+    // Update active button
+    document.querySelectorAll('#presetLayouts button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+    
+    currentCols = cols;
+    currentRows = rows;
+    slots = {}; // Clear assignments
+    createGrid();
+}
+
+// Layout type functions
+function updateLayoutType() {
+    const type = document.querySelector('input[name="layoutType"]:checked')?.value || 'auto';
+    console.log('🔧 Layout type:', type);
+    
+    const autoInfo = document.getElementById('autoLayoutInfo');
+    const presetLayouts = document.getElementById('presetLayouts');
+    const customGrid = document.getElementById('customGrid');
+    
+    if (autoInfo) autoInfo.style.display = type === 'auto' ? 'block' : 'none';
+    if (presetLayouts) presetLayouts.style.display = type === 'preset' ? 'block' : 'none';
+    if (customGrid) customGrid.style.display = type === 'custom' ? 'block' : 'none';
+    
+    if (type === 'auto' && images.length > 0) {
+        autoSetLayout();
+    } else if (type === 'custom') {
+        updateCustomLayout();
+    }
+}
+
+function updateCustomLayout() {
+    const cols = parseInt(document.getElementById('customCols')?.value) || 3;
+    const rows = parseInt(document.getElementById('customRows')?.value) || 2;
+    const totalSlots = cols * rows;
+    
+    const info = document.getElementById('customLayoutInfo');
+    if (info) {
+        info.textContent = `${cols} × ${rows} grid = ${totalSlots} total slots`;
+    }
+    
+    currentCols = cols;
+    currentRows = rows;
+    
+    if (images.length > 0) {
+        createGrid();
+    }
+}
+
+function updateAutoLayoutInfo() {
+    const info = document.getElementById('autoLayoutDetails');
+    if (info && images.length > 0) {
+        info.textContent = `📐 ${currentCols} × ${currentRows} grid (${currentCols * currentRows} slots) for ${images.length} images`;
+    }
+}
+
+// Generate final image
+function generateImage() {
+    console.log('🎨 Generating final image...');
+    
+    const canvas = document.getElementById('finalCanvas');
+    if (!canvas) {
+        console.error('❌ Canvas not found!');
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Get all settings
+    const quality = document.getElementById('qualitySelect')?.value || 'large';
+    const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
+    const customSpacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    const customFontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
+    const backgroundType = document.getElementById('backgroundType')?.value || 'white';
+    
+    let cellW, cellH;
+    switch (quality) {
+        case 'medium': cellW = 800; cellH = 600; break;
+        case 'large': cellW = 1200; cellH = 900; break;
+        case 'xlarge': cellW = 1600; cellH = 1200; break;
+        case 'ultra': cellW = 2400; cellH = 1800; break;
+        default: cellW = 1200; cellH = 900;
+    }
+    
+    console.log(`📐 Using ${cellW}×${cellH} per cell (${quality} quality)`);
+    console.log(`📏 Spacing: ${customSpacing}px, Font: ${customFontSize}px, Labels: ${labelPosition}`);
+    
+    // Set canvas size
+    canvas.width = (cellW * currentCols) + (customSpacing * (currentCols + 1));
+    canvas.height = (cellH * currentRows) + (customSpacing * (currentRows + 1));
+    
+    console.log(`🖼️ Final canvas: ${canvas.width}×${canvas.height} pixels`);
+    
+    // Set background
+    if (backgroundType !== 'transparent') {
+        let bgColor = 'white';
+        if (backgroundType === 'light') bgColor = '#f5f5f5';
+        if (backgroundType === 'custom') bgColor = document.getElementById('customBgColor')?.value || 'white';
+        
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Draw each assigned image
+    Object.keys(slots).forEach(slotIndex => {
+        const imageIndex = slots[slotIndex];
+        const img = images[imageIndex];
+        if (!img) return;
+        
+        const row = Math.floor(slotIndex / currentCols);
+        const col = slotIndex % currentCols;
+        const x = customSpacing + (col * (cellW + customSpacing));
+        const y = customSpacing + (row * (cellH + customSpacing));
+        
+        drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, customFontSize);
+    });
+    
+    // Show result
+    showElement('finalImagePreview');
+    document.getElementById('finalImagePreview').classList.add('fade-in');
+    
+    console.log('✅ Image generated!');
+    
+    // Scroll to preview
+    setTimeout(() => {
+        document.getElementById('finalImagePreview').scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+}
+
+// Draw image with label
+function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, fontSize) {
+    const padding = Math.max(20, cellW * 0.05);
+    const labelHeight = fontSize + 10;
+    
+    console.log(`🖼️ Drawing ${img.name} with ${fontSize}px font at ${labelPosition}`);
+    
+    // Calculate available space
+    let imageX = x + padding;
+    let imageY = y + padding;
+    let availableWidth = cellW - (padding * 2);
+    let availableHeight = cellH - (padding * 2);
+    
+    // Adjust for label position
+    if (labelPosition === 'top') {
+        imageY += labelHeight + 10;
+        availableHeight -= (labelHeight + 10);
+    } else if (labelPosition === 'bottom') {
+        availableHeight -= (labelHeight + 10);
+    }
+    
+    // Calculate scaling
+    const scale = Math.min(
+        availableWidth / img.img.width,
+        availableHeight / img.img.height,
+        1 // Never upscale
+    );
+    
+    const scaledWidth = img.img.width * scale;
+    const scaledHeight = img.img.height * scale;
+    
+    // Center the image
+    const centeredImageX = imageX + (availableWidth - scaledWidth) / 2;
+    const centeredImageY = imageY + (availableHeight - scaledHeight) / 2;
+    
+    // Draw image with high quality
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img.img, centeredImageX, centeredImageY, scaledWidth, scaledHeight);
+    
+    // Draw label
+    if (labelPosition !== 'none') {
+        ctx.font = `${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        
+        const labelX = x + cellW / 2;
+        let labelY;
+        
+        switch (labelPosition) {
+            case 'top':
+                ctx.fillStyle = 'black';
+                labelY = y + padding + fontSize;
+                break;
+                
+            case 'bottom':
+                ctx.fillStyle = 'black';
+                labelY = y + cellH - padding;
+                break;
+                
+            case 'overlay':
+                labelY = centeredImageY + scaledHeight - 15;
+                const textWidth = ctx.measureText(img.name).width;
+                
+                // Background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(
+                    labelX - textWidth/2 - 10, 
+                    labelY - fontSize - 5, 
+                    textWidth + 20, 
+                    fontSize + 10
+                );
+                
+                // Text
+                ctx.fillStyle = 'white';
+                break;
+        }
+        
+        ctx.fillText(img.name, labelX, labelY);
+        console.log(`📝 Drew label "${img.name}" at ${labelPosition}`);
+    }
+}
+
+// Download functions
+function downloadImage(format = 'png') {
+    console.log('💾 Downloading image as:', format);
+    
+    const canvas = document.getElementById('finalCanvas');
+    if (!canvas) return;
+    
+    const timestamp = Date.now();
+    const filename = `chart-layout-${currentCols}x${currentRows}-${timestamp}`;
+    
+    switch (format) {
+        case 'png': downloadPNG(canvas, filename); break;
+        case 'jpg': downloadJPG(canvas, filename); break;
+        case 'pdf': downloadPDF(canvas, filename); break;
+        case 'tiff': downloadTIFF(canvas, filename); break;
+        default: downloadPNG(canvas, filename);
+    }
+}
+
+function downloadPNG(canvas, filename) {
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `${filename}.png`;
+    link.click();
+    console.log('✅ PNG download triggered!');
+}
+
+function downloadJPG(canvas, filename) {
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.download = `${filename}.jpg`;
+    link.click();
+    console.log('✅ JPG download triggered!');
+}
+
+function downloadPDF(canvas, filename) {
+    try {
+        console.log('📄 Generating PDF...');
+        
+        const dpi = parseInt(document.getElementById('pdfDPI')?.value || 300);
+        const pdfWidth = (canvas.width / dpi) * 25.4;
+        const pdfHeight = (canvas.height / dpi) * 25.4;
+        
+        console.log(`📐 PDF: ${pdfWidth.toFixed(1)}×${pdfHeight.toFixed(1)}mm at ${dpi} DPI`);
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+            unit: 'mm',
+            format: [pdfWidth, pdfHeight]
+        });
+        
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, '', 'FAST');
+        
+        pdf.setProperties({
+            title: `Chart Layout ${currentCols}×${currentRows}`,
+            subject: `Scientific Chart Grid - ${dpi} DPI`,
+            author: 'Chart Layout Tool',
+            creator: 'Chart Layout Tool'
+        });
+        
+        pdf.save(`${filename}.pdf`);
+        console.log('✅ PDF generated successfully!');
+        
+    } catch (error) {
+        console.error('❌ PDF generation failed:', error);
+        alert('PDF generation failed. Try PNG instead.');
+    }
+}
+
+function downloadTIFF(canvas, filename) {
+    try {
+        console.log('🖼️ Generating TIFF...');
+        
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const rgba = new Uint8Array(imageData.data);
+        
+        const tiffData = UTIF.encodeImage(rgba, canvas.width, canvas.height);
+        const blob = new Blob([tiffData], { type: 'image/tiff' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}.tiff`;
+        link.click();
+        
+        console.log('✅ TIFF generated and downloaded!');
+        
+    } catch (error) {
+        console.error('❌ TIFF generation failed:', error);
+        alert('TIFF generation failed. Try PNG instead.');
+    }
+}
+
+// Utility functions
+function clearLayout() { 
+    console.log('🗑️ Clearing layout...');
+    slots = {}; 
+    createGrid(); 
+}
+
+function resetAll() { 
+    if (confirm('🔄 This will remove all images and start over. Are you sure?')) {
+        console.log('🔄 Resetting everything...');
+        location.reload(); 
+    }
+}
+
+async function copyToClipboard() {
+    try {
+        const canvas = document.getElementById('finalCanvas');
+        if (!canvas) return;
+        
+        canvas.toBlob(async (blob) => {
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                alert('✅ Image copied to clipboard!');
+            } catch (err) {
+                alert('❌ Failed to copy to clipboard. Try downloading instead.');
+            }
+        });
+    } catch (err) {
+        alert('❌ Clipboard not supported in this browser. Try downloading instead.');
+    }
+}
