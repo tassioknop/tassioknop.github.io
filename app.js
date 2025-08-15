@@ -18,6 +18,317 @@ let slots = {};
 
 console.log('🚀 Chart Layout Tool loaded!');
 
+// Interactive Canvas Variables
+let fabricCanvas = null;
+let canvasObjects = []; // Track our image objects
+let gridLines = [];
+let showGrid = false;
+
+// Initialize Fabric Canvas
+function initializeCanvas() {
+    if (fabricCanvas) {
+        fabricCanvas.dispose(); // Clean up existing canvas
+    }
+    
+    fabricCanvas = new fabric.Canvas('layoutCanvas', {
+        backgroundColor: 'white',
+        selection: true,
+        preserveObjectStacking: true
+    });
+    
+    // Set canvas size based on quality setting
+    const quality = document.getElementById('qualitySelect')?.value || 'large';
+    let canvasWidth, canvasHeight;
+    
+    switch (quality) {
+        case 'medium': canvasWidth = 800; canvasHeight = 500; break;
+        case 'large': canvasWidth = 1000; canvasHeight = 600; break;
+        case 'xlarge': canvasWidth = 1200; canvasHeight = 720; break;
+        case 'ultra': canvasWidth = 1400; canvasHeight = 840; break;
+        default: canvasWidth = 1000; canvasHeight = 600;
+    }
+    
+    fabricCanvas.setDimensions({
+        width: canvasWidth,
+        height: canvasHeight
+    });
+    
+    // Event listeners
+    fabricCanvas.on('object:modified', onObjectModified);
+    fabricCanvas.on('object:moving', onObjectMoving);
+    fabricCanvas.on('mouse:dblclick', onDoubleClick);
+    
+    console.log(`🎨 Canvas initialized: ${canvasWidth}×${canvasHeight}`);
+}
+
+// Add images to canvas automatically
+function addImagesToCanvas() {
+    if (!fabricCanvas || images.length === 0) return;
+    
+    fabricCanvas.clear();
+    canvasObjects = [];
+    
+    const canvasWidth = fabricCanvas.getWidth();
+    const canvasHeight = fabricCanvas.getHeight();
+    
+    // Calculate grid layout
+    const cols = Math.ceil(Math.sqrt(images.length));
+    const rows = Math.ceil(images.length / cols);
+    
+    const cellWidth = canvasWidth / cols;
+    const cellHeight = canvasHeight / rows;
+    const padding = 20;
+    
+    images.forEach((img, index) => {
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+        
+        const x = (col * cellWidth) + padding;
+        const y = (row * cellHeight) + padding;
+        const maxWidth = cellWidth - (padding * 2);
+        const maxHeight = cellHeight - (padding * 2);
+        
+        // Create fabric image object
+        fabric.Image.fromURL(img.src, (fabricImg) => {
+            // Scale to fit cell
+            const scale = Math.min(
+                maxWidth / fabricImg.width,
+                maxHeight / fabricImg.height,
+                1
+            );
+            
+            fabricImg.set({
+                left: x,
+                top: y,
+                scaleX: scale,
+                scaleY: scale,
+                selectable: true,
+                hasControls: true,
+                hasBorders: true,
+                cornerStyle: 'circle',
+                cornerColor: '#007bff',
+                borderColor: '#007bff',
+                transparentCorners: false
+            });
+            
+            // Add custom properties
+            fabricImg.imageData = img;
+            fabricImg.originalIndex = index;
+            
+            fabricCanvas.add(fabricImg);
+            canvasObjects.push(fabricImg);
+            
+            // Add label if needed
+            addLabelToImage(fabricImg);
+            
+            console.log(`✅ Added ${img.name} to canvas at (${x}, ${y})`);
+        });
+    });
+    
+    fabricCanvas.renderAll();
+}
+
+// Add label to image
+function addLabelToImage(fabricImg) {
+    const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
+    if (labelPosition === 'none') return;
+    
+    const fontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
+    const label = new fabric.Text(fabricImg.imageData.name, {
+        fontSize: fontSize,
+        fill: 'black',
+        fontFamily: 'Arial',
+        selectable: false, // Labels follow their images
+        evented: false
+    });
+    
+    // Position label relative to image
+    positionLabel(label, fabricImg, labelPosition);
+    
+    fabricImg.label = label;
+    fabricCanvas.add(label);
+}
+
+// Position label relative to image
+function positionLabel(label, image, position) {
+    const imageLeft = image.left;
+    const imageTop = image.top;
+    const imageWidth = image.getScaledWidth();
+    const imageHeight = image.getScaledHeight();
+    
+    let labelLeft, labelTop;
+    
+    switch (position) {
+        case 'top':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop - 25;
+            label.set({ textAlign: 'center', originX: 'center' });
+            break;
+        case 'top-left':
+            labelLeft = imageLeft;
+            labelTop = imageTop - 25;
+            label.set({ textAlign: 'left', originX: 'left' });
+            break;
+        case 'top-right':
+            labelLeft = imageLeft + imageWidth;
+            labelTop = imageTop - 25;
+            label.set({ textAlign: 'right', originX: 'right' });
+            break;
+        case 'bottom':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop + imageHeight + 20;
+            label.set({ textAlign: 'center', originX: 'center' });
+            break;
+        case 'bottom-left':
+            labelLeft = imageLeft;
+            labelTop = imageTop + imageHeight + 20;
+            label.set({ textAlign: 'left', originX: 'left' });
+            break;
+        case 'bottom-right':
+            labelLeft = imageLeft + imageWidth;
+            labelTop = imageTop + imageHeight + 20;
+            label.set({ textAlign: 'right', originX: 'right' });
+            break;
+        case 'left':
+            labelLeft = imageLeft - 10;
+            labelTop = imageTop + imageHeight / 2;
+            label.set({ textAlign: 'right', originX: 'right', originY: 'center' });
+            break;
+        case 'right':
+            labelLeft = imageLeft + imageWidth + 10;
+            labelTop = imageTop + imageHeight / 2;
+            label.set({ textAlign: 'left', originX: 'left', originY: 'center' });
+            break;
+        case 'overlay':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop + imageHeight - 15;
+            label.set({ 
+                textAlign: 'center', 
+                originX: 'center',
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                fill: 'white',
+                padding: 5
+            });
+            break;
+    }
+    
+    label.set({ left: labelLeft, top: labelTop });
+}
+
+// Event handlers
+function onObjectModified(e) {
+    const obj = e.target;
+    if (obj.label) {
+        const position = document.getElementById('labelPosition')?.value || 'bottom';
+        positionLabel(obj.label, obj, position);
+        fabricCanvas.renderAll();
+    }
+}
+
+function onObjectMoving(e) {
+    // Update label position while dragging
+    onObjectModified(e);
+}
+
+function onDoubleClick(e) {
+    const obj = e.target;
+    if (obj && obj.imageData) {
+        const newName = prompt('Enter new label:', obj.imageData.name);
+        if (newName && newName.trim()) {
+            obj.imageData.name = newName.trim();
+            if (obj.label) {
+                obj.label.set('text', newName.trim());
+                fabricCanvas.renderAll();
+            }
+        }
+    }
+}
+
+// Canvas control functions
+function autoArrangeImages() {
+    if (!fabricCanvas) return;
+    
+    const canvasWidth = fabricCanvas.getWidth();
+    const canvasHeight = fabricCanvas.getHeight();
+    const objects = canvasObjects;
+    
+    if (objects.length === 0) return;
+    
+    const cols = Math.ceil(Math.sqrt(objects.length));
+    const rows = Math.ceil(objects.length / cols);
+    
+    const cellWidth = canvasWidth / cols;
+    const cellHeight = canvasHeight / rows;
+    const padding = 20;
+    
+    objects.forEach((obj, index) => {
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+        
+        const x = (col * cellWidth) + padding;
+        const y = (row * cellHeight) + padding;
+        
+        obj.set({ left: x, top: y });
+        
+        if (obj.label) {
+            const position = document.getElementById('labelPosition')?.value || 'bottom';
+            positionLabel(obj.label, obj, position);
+        }
+    });
+    
+    fabricCanvas.renderAll();
+    console.log('📐 Auto-arranged images');
+}
+
+function resetCanvasLayout() {
+    addImagesToCanvas();
+}
+
+function addGridLines() {
+    // Toggle grid implementation
+    showGrid = !showGrid;
+    
+    if (showGrid) {
+        // Add grid lines
+        const canvasWidth = fabricCanvas.getWidth();
+        const canvasHeight = fabricCanvas.getHeight();
+        const gridSize = 50;
+        
+        // Vertical lines
+        for (let i = 0; i <= canvasWidth; i += gridSize) {
+            const line = new fabric.Line([i, 0, i, canvasHeight], {
+                stroke: '#ddd',
+                strokeWidth: 1,
+                selectable: false,
+                evented: false
+            });
+            gridLines.push(line);
+            fabricCanvas.add(line);
+            fabricCanvas.sendToBack(line);
+        }
+        
+        // Horizontal lines
+        for (let i = 0; i <= canvasHeight; i += gridSize) {
+            const line = new fabric.Line([0, i, canvasWidth, i], {
+                stroke: '#ddd',
+                strokeWidth: 1,
+                selectable: false,
+                evented: false
+            });
+            gridLines.push(line);
+            fabricCanvas.add(line);
+            fabricCanvas.sendToBack(line);
+        }
+    } else {
+        // Remove grid lines
+        gridLines.forEach(line => fabricCanvas.remove(line));
+        gridLines = [];
+    }
+    
+    fabricCanvas.renderAll();
+}
+
+
 // Initialize application
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📋 DOM loaded!');
@@ -342,9 +653,18 @@ function showControls() {
         if (element) {
             element.style.display = 'block';
             element.classList.add('fade-in');
-            console.log('✅ Showed section:', id);
         }
     });
+    
+    // Show canvas instead of grid
+    document.getElementById('canvasSection').style.display = 'block';
+    document.getElementById('canvasSection').classList.add('fade-in');
+    
+    // Initialize interactive canvas
+    setTimeout(() => {
+        initializeCanvas();
+        addImagesToCanvas();
+    }, 100);
     
     updateAutoLayoutInfo();
 }
@@ -628,76 +948,44 @@ function updateAutoLayoutInfo() {
 
 // Generate final image
 function generateImage() {
-    console.log('🎨 Generating final image...');
+    console.log('🎨 Generating final image from canvas...');
     
-    const canvas = document.getElementById('finalCanvas');
-    if (!canvas) {
-        console.error('❌ Canvas not found!');
+    if (!fabricCanvas) {
+        console.error('❌ Canvas not initialized!');
         return;
     }
     
-    const ctx = canvas.getContext('2d');
-    
-    // Get all settings
-    const quality = document.getElementById('qualitySelect')?.value || 'large';
-    const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
-    const customSpacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
-    const customFontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
-    const backgroundType = document.getElementById('backgroundType')?.value || 'white';
-    
-    let cellW, cellH;
-    switch (quality) {
-        case 'medium': cellW = 800; cellH = 600; break;
-        case 'large': cellW = 1200; cellH = 900; break;
-        case 'xlarge': cellW = 1600; cellH = 1200; break;
-        case 'ultra': cellW = 2400; cellH = 1800; break;
-        default: cellW = 1200; cellH = 900;
-    }
-    
-    console.log(`📐 Using ${cellW}×${cellH} per cell (${quality} quality)`);
-    console.log(`📏 Spacing: ${customSpacing}px, Font: ${customFontSize}px, Labels: ${labelPosition}`);
-    
-    // Set canvas size
-    canvas.width = (cellW * currentCols) + (customSpacing * (currentCols + 1));
-    canvas.height = (cellH * currentRows) + (customSpacing * (currentRows + 1));
-    
-    console.log(`🖼️ Final canvas: ${canvas.width}×${canvas.height} pixels`);
-    
-    // Set background
-    if (backgroundType !== 'transparent') {
-        let bgColor = 'white';
-        if (backgroundType === 'light') bgColor = '#f5f5f5';
-        if (backgroundType === 'custom') bgColor = document.getElementById('customBgColor')?.value || 'white';
-        
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    
-    // Draw each assigned image
-    Object.keys(slots).forEach(slotIndex => {
-        const imageIndex = slots[slotIndex];
-        const img = images[imageIndex];
-        if (!img) return;
-        
-        const row = Math.floor(slotIndex / currentCols);
-        const col = slotIndex % currentCols;
-        const x = customSpacing + (col * (cellW + customSpacing));
-        const y = customSpacing + (row * (cellH + customSpacing));
-        
-        drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, customFontSize);
+    // Export the canvas directly
+    const dataURL = fabricCanvas.toDataURL({
+        format: 'png',
+        quality: 1,
+        multiplier: 2 // High resolution
     });
     
-    // Show result
-    showElement('finalImagePreview');
-    document.getElementById('finalImagePreview').classList.add('fade-in');
+    // Update the final canvas
+    const finalCanvas = document.getElementById('finalCanvas');
+    const ctx = finalCanvas.getContext('2d');
     
-    console.log('✅ Image generated!');
+    const img = new Image();
+    img.onload = function() {
+        finalCanvas.width = img.width;
+        finalCanvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        // Show result
+        showElement('finalImagePreview');
+        document.getElementById('finalImagePreview').classList.add('fade-in');
+        
+        console.log('✅ Image generated from canvas!');
+        
+        setTimeout(() => {
+            document.getElementById('finalImagePreview').scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    };
     
-    // Scroll to preview
-    setTimeout(() => {
-        document.getElementById('finalImagePreview').scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    img.src = dataURL;
 }
+
 
 // Draw image with label
 function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, fontSize) {
