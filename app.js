@@ -501,6 +501,60 @@ function processRegularImage(file, index, callback) {
     reader.readAsDataURL(file);
 }
 
+function autoArrangeImages() {
+    if (!fabricCanvas) return;
+    
+    const canvasWidth = fabricCanvas.getWidth();
+    const canvasHeight = fabricCanvas.getHeight();
+    const objects = canvasObjects;
+    
+    if (objects.length === 0) return;
+    
+    // Get current spacing setting
+    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    
+    const cols = Math.ceil(Math.sqrt(objects.length));
+    const rows = Math.ceil(objects.length / cols);
+    
+    const cellWidth = (canvasWidth - (spacing * (cols + 1))) / cols;
+    const cellHeight = (canvasHeight - (spacing * (rows + 1))) / rows;
+    
+    objects.forEach((obj, index) => {
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+        
+        const x = spacing + (col * (cellWidth + spacing));
+        const y = spacing + (row * (cellHeight + spacing));
+        
+        // Calculate max size for this cell
+        const maxWidth = cellWidth - (spacing * 0.5);
+        const maxHeight = cellHeight - (spacing * 0.5);
+        
+        // Scale to fit cell with spacing
+        const scale = Math.min(
+            maxWidth / obj.width,
+            maxHeight / obj.height,
+            1
+        );
+        
+        obj.set({ 
+            left: x, 
+            top: y,
+            scaleX: scale,
+            scaleY: scale
+        });
+        
+        if (obj.label) {
+            const position = document.getElementById('labelPosition')?.value || 'bottom';
+            positionLabel(obj.label, obj, position);
+        }
+    });
+    
+    fabricCanvas.renderAll();
+    console.log(`📐 Auto-arranged with ${spacing}px spacing`);
+}
+
+
 // Process PDF files
 function processPDF(file, index, callback) {
     const reader = new FileReader();
