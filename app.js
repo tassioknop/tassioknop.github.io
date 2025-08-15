@@ -251,10 +251,10 @@ function autoArrangeImagesInGrid(cols, rows) {
     
     const canvasWidth = fabricCanvas.getWidth();
     const canvasHeight = fabricCanvas.getHeight();
+    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
     
-    const cellWidth = canvasWidth / cols;
-    const cellHeight = canvasHeight / rows;
-    const padding = 20;
+    const cellWidth = (canvasWidth - (spacing * (cols + 1))) / cols;
+    const cellHeight = (canvasHeight - (spacing * (rows + 1))) / rows;
     
     canvasObjects.forEach((obj, index) => {
         if (index >= cols * rows) return; // Skip excess images
@@ -262,10 +262,12 @@ function autoArrangeImagesInGrid(cols, rows) {
         const row = Math.floor(index / cols);
         const col = index % cols;
         
-        const x = (col * cellWidth) + padding;
-        const y = (row * cellHeight) + padding;
-        const maxWidth = cellWidth - (padding * 2);
-        const maxHeight = cellHeight - (padding * 2);
+        const x = spacing + (col * (cellWidth + spacing));
+        const y = spacing + (row * (cellHeight + spacing));
+        
+        // Calculate max size for this cell
+        const maxWidth = cellWidth - (spacing * 0.5);
+        const maxHeight = cellHeight - (spacing * 0.5);
         
         // Scale to fit cell
         const scale = Math.min(
@@ -289,8 +291,9 @@ function autoArrangeImagesInGrid(cols, rows) {
     });
     
     fabricCanvas.renderAll();
-    console.log(`📐 Arranged ${canvasObjects.length} images in ${cols}×${rows} grid`);
+    console.log(`📐 Arranged ${canvasObjects.length} images in ${cols}×${rows} grid with ${spacing}px spacing`);
 }
+
 
 // Update all labels when position setting changes
 function updateAllCanvasLabels() {
@@ -1429,4 +1432,83 @@ function updateAllLabelPreviews() {
     
     console.log(`🏷️ Updated all label previews to: ${position}`);
 }
+
+// Update canvas spacing in real-time
+function updateCanvasSpacing() {
+    if (!fabricCanvas) return;
+    
+    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    console.log('📏 Updating canvas spacing to:', spacing + 'px');
+    
+    // Re-arrange with new spacing
+    autoArrangeImages();
+    
+    // Update spacing display
+    document.getElementById('spacingValue').textContent = spacing + 'px';
+}
+
+// Update canvas background in real-time
+function updateCanvasBackground() {
+    if (!fabricCanvas) return;
+    
+    const backgroundType = document.getElementById('backgroundType')?.value || 'white';
+    const customColor = document.getElementById('customBgColor')?.value || '#ffffff';
+    
+    let backgroundColor = 'white';
+    
+    switch (backgroundType) {
+        case 'white':
+            backgroundColor = 'white';
+            break;
+        case 'transparent':
+            backgroundColor = 'transparent';
+            break;
+        case 'light':
+            backgroundColor = '#f5f5f5';
+            break;
+        case 'custom':
+            backgroundColor = customColor;
+            break;
+    }
+    
+    fabricCanvas.setBackgroundColor(backgroundColor, fabricCanvas.renderAll.bind(fabricCanvas));
+    console.log('🎨 Updated canvas background to:', backgroundColor);
+}
+
+// Update canvas quality/size in real-time
+function updateCanvasQuality() {
+    if (!fabricCanvas) return;
+    
+    const quality = document.getElementById('qualitySelect')?.value || 'large';
+    let canvasWidth, canvasHeight;
+    
+    switch (quality) {
+        case 'medium': canvasWidth = 800; canvasHeight = 500; break;
+        case 'large': canvasWidth = 1000; canvasHeight = 600; break;
+        case 'xlarge': canvasWidth = 1200; canvasHeight = 720; break;
+        case 'ultra': canvasWidth = 1400; canvasHeight = 840; break;
+        default: canvasWidth = 1000; canvasHeight = 600;
+    }
+    
+    // Store current objects
+    const currentObjects = [...canvasObjects];
+    const currentBackground = fabricCanvas.backgroundColor;
+    
+    // Resize canvas
+    fabricCanvas.setDimensions({
+        width: canvasWidth,
+        height: canvasHeight
+    });
+    
+    // Restore background
+    fabricCanvas.setBackgroundColor(currentBackground, fabricCanvas.renderAll.bind(fabricCanvas));
+    
+    // Re-arrange objects to fit new size
+    autoArrangeImages();
+    
+    console.log(`🔍 Updated canvas size to: ${canvasWidth}×${canvasHeight} (${quality})`);
+}
+
+
+
 
