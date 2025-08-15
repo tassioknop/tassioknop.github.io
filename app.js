@@ -1014,3 +1014,65 @@ async function copyToClipboard() {
         alert('❌ Clipboard not supported in this browser. Try downloading instead.');
     }
 }
+
+// Update all label previews when position changes
+function updateAllLabelPreviews() {
+    const position = document.getElementById('labelPosition')?.value || 'bottom';
+    
+    document.querySelectorAll('.chart-preview-label').forEach(label => {
+        let labelStyle = `
+            position: absolute; 
+            background: rgba(0,0,0,0.8); 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            max-width: calc(100% - 10px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 2;
+            pointer-events: none;
+        `;
+        
+        switch (position) {
+            case 'top':
+                labelStyle += `top: 30px; left: 50%; transform: translateX(-50%); text-align: center;`;
+                break;
+            case 'top-left':
+                labelStyle += `top: 30px; left: 10px; text-align: left;`;
+                break;
+            case 'top-right':
+                labelStyle += `top: 30px; right: 10px; text-align: right;`;
+                break;
+            case 'bottom':
+                labelStyle += `bottom: 45px; left: 50%; transform: translateX(-50%); text-align: center;`;
+                break;
+            case 'bottom-left':
+                labelStyle += `bottom: 45px; left: 10px; text-align: left;`;
+                break;
+            case 'bottom-right':
+                labelStyle += `bottom: 45px; right: 10px; text-align: right;`;
+                break;
+            case 'left':
+                labelStyle += `top: 50%; left: 10px; transform: translateY(-50%); text-align: left;`;
+                break;
+            case 'right':
+                labelStyle += `top: 50%; right: 10px; transform: translateY(-50%); text-align: right;`;
+                break;
+            case 'overlay':
+                labelStyle += `bottom: 60px; left: 50%; transform: translateX(-50%); text-align: center;`;
+                break;
+            case 'none':
+                labelStyle += `display: none;`;
+                break;
+            default:
+                labelStyle += `bottom: 45px; left: 50%; transform: translateX(-50%); text-align: center;`;
+        }
+        
+        label.style.cssText = labelStyle;
+    });
+    
+    console.log(`🏷️ Updated all label previews to: ${position}`);
+}
+
