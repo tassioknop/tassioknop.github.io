@@ -157,63 +157,66 @@
             <div class="control-row">
                 <label>
                     📏 Spacing: 
-                    <input type="range" id="spacingSlider" min="5" max="80" value="20">
+                    <input type="range" id="spacingSlider" min="0" max="80" value="20" 
+                           oninput="updateCanvasSpacing()">
                     <span id="spacingValue">20px</span>
                 </label>
                 <label>
                     📝 Font Size: 
-                    <input type="range" id="fontSlider" min="12" max="48" value="16" oninput="document.getElementById('fontValue').textContent = this.value + 'px'; updateCanvasFontSizes();">
+                    <input type="range" id="fontSlider" min="12" max="48" value="16" 
+                           oninput="document.getElementById('fontValue').textContent = this.value + 'px'; updateCanvasFontSizes();">
                     <span id="fontValue">16px</span>
                 </label>
             </div>
             
             <div class="control-row">
-                   <label>
-                    🎯 Label Position: 
-                    <select id="labelPosition" onchange="updateAllCanvasLabels()">
-                        <option value="bottom">Bottom (center)</option>
-                        <option value="top">Top (center)</option>
-                        <option value="bottom-left">Bottom Left</option>
-                        <option value="bottom-right">Bottom Right</option>
-                        <option value="top-left">Top Left</option>
-                        <option value="top-right">Top Right</option>
-                        <option value="left">Left (middle)</option>
-                        <option value="right">Right (middle)</option>
-                        <option value="overlay">Overlay (bottom center)</option>
-                        <option value="none">No Labels</option>
-                    </select>
-                </label>
-                <label>
-                    🎨 Background: 
-                    <select id="backgroundType">
-                        <option value="white">White</option>
-                        <option value="transparent">Transparent</option>
-                        <option value="light">Light Gray</option>
-                        <option value="custom">Custom Color</option>
-                    </select>
-                    <input type="color" id="customBgColor" value="#ffffff" style="display: none; margin-left: 10px;">
-                </label>
-            </div>
-            
-            <div class="control-row">
-                <label>
-                    🔍 Output Quality: 
-                    <select id="qualitySelect">
-                        <option value="medium">Medium (800×600/cell) - Web</option>
-                        <option value="large" selected>Large (1200×900/cell) - Standard</option>
-                        <option value="xlarge">X-Large (1600×1200/cell) - Print</option>
-                        <option value="ultra">Ultra (2400×1800/cell) - Archive</option>
-                    </select>
-                </label>
-                <label>
-                    📄 PDF DPI: 
-                    <select id="pdfDPI">
-                        <option value="150">150 DPI (Draft)</option>
-                        <option value="300" selected>300 DPI (Print)</option>
-                        <option value="600">600 DPI (High-end)</option>
-                    </select>
-                </label>
-            </div>
+            <label>
+                🎯 Label Position: 
+                <select id="labelPosition" onchange="updateAllCanvasLabels()">
+                    <option value="bottom">Bottom (center)</option>
+                    <option value="top">Top (center)</option>
+                    <option value="bottom-left">Bottom Left</option>
+                    <option value="bottom-right">Bottom Right</option>
+                    <option value="top-left">Top Left</option>
+                    <option value="top-right">Top Right</option>
+                    <option value="left">Left (middle)</option>
+                    <option value="right">Right (middle)</option>
+                    <option value="overlay">Overlay (bottom center)</option>
+                    <option value="none">No Labels</option>
+                </select>
+            </label>
+            <label>
+                🎨 Background: 
+                <select id="backgroundType" onchange="updateCanvasBackground()">
+                    <option value="white">White</option>
+                    <option value="transparent">Transparent</option>
+                    <option value="light">Light Gray</option>
+                    <option value="custom">Custom Color</option>
+                </select>
+                <input type="color" id="customBgColor" value="#ffffff" 
+                       onchange="updateCanvasBackground()" 
+                       style="display: none; margin-left: 10px;">
+            </label>
+        </div>
+        
+        <div class="control-row">
+            <label>
+                🔍 Output Quality: 
+                <select id="qualitySelect" onchange="updateCanvasQuality()">
+                    <option value="medium">Medium (800×500) - Web</option>
+                    <option value="large" selected>Large (1000×600) - Standard</option>
+                    <option value="xlarge">X-Large (1200×720) - Print</option>
+                    <option value="ultra">Ultra (1400×840) - Archive</option>
+                </select>
+            </label>
+            <label>
+                📄 PDF DPI: 
+                <select id="pdfDPI">
+                    <option value="150">150 DPI (Draft)</option>
+                    <option value="300" selected>300 DPI (Print)</option>
+                    <option value="600">600 DPI (High-end)</option>
+                </select>
+            </label>
         </div>
         
         <!-- Controls -->
