@@ -119,8 +119,33 @@
                 <li><strong>🚀 Generate</strong> and download your combined layout</li>
             </ul>
         </div>
+
+        <!-- Interactive Canvas Preview -->
+        <div id="canvasSection" style="display: none;">
+            <h3>🎨 Interactive Layout Editor</h3>
+            <div class="canvas-controls">
+                <button onclick="autoArrangeImages()" class="secondary-btn">📐 Auto Arrange</button>
+                <button onclick="resetCanvasLayout()" class="secondary-btn">🔄 Reset Layout</button>
+                <button onclick="addGridLines()" class="secondary-btn">📏 Toggle Grid</button>
+            </div>
+            
+            <div class="canvas-container-editor">
+                <canvas id="layoutCanvas" width="1000" height="600"></canvas>
+            </div>
+            
+            <div class="canvas-instructions">
+                <p><strong>💡 How to use:</strong></p>
+                <ul>
+                    <li><strong>Drag</strong> images to reposition them</li>
+                    <li><strong>Drag corners</strong> to resize images</li>
+                    <li><strong>Double-click</strong> to edit labels</li>
+                    <li><strong>Right-click</strong> to delete images</li>
+                </ul>
+            </div>
+        </div>
+
         
-        <!-- Preview Area -->
+        <!-- Fallback Preview Area if interactive is not available  -->
         <div id="layoutPreview" style="display: none;">
             <!-- Slots will be generated here -->
         </div>
@@ -238,6 +263,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
     
     <!-- Main Application -->
     <script src="app.js"></script>
