@@ -2,7 +2,7 @@
  * Chart Layout Tool
  * Copyright (c) 2025 Tassio Knop
  * Licensed under MIT License
- * https://github.com/yourusername/chart-layout-tool
+ * https://github.com/tassioknop/tassioknop.github.io
  */
 
 // Configure PDF.js
