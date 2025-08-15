@@ -981,10 +981,29 @@ function updateCustomLayout() {
     currentCols = cols;
     currentRows = rows;
     
-    if (images.length > 0) {
-        createGrid();
+    // Use canvas instead of old grid
+    if (fabricCanvas) {
+        autoArrangeImagesInGrid(cols, rows);
     }
 }
+
+// Update font sizes when slider changes
+function updateCanvasFontSizes() {
+    if (!fabricCanvas) return;
+    
+    const fontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
+    
+    canvasObjects.forEach(obj => {
+        if (obj.label) {
+            obj.label.set('fontSize', fontSize);
+        }
+    });
+    
+    fabricCanvas.renderAll();
+    console.log('📝 Updated canvas font sizes to:', fontSize + 'px');
+}
+
+
 
 function updateAutoLayoutInfo() {
     const info = document.getElementById('autoLayoutDetails');
