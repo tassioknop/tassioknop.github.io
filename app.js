@@ -408,34 +408,17 @@ function checkLibraries() {
 
 // Setup event listeners for controls
 function setupEventListeners() {
-    // Spacing slider
-    const spacingSlider = document.getElementById('spacingSlider');
-    const spacingValue = document.getElementById('spacingValue');
-    if (spacingSlider && spacingValue) {
-        spacingSlider.addEventListener('input', (e) => {
-            spacingValue.textContent = e.target.value + 'px';
-            updatePreviewSpacing(e.target.value);
-        });
-    }
-    
-    // Font slider
-    const fontSlider = document.getElementById('fontSlider');
-    const fontValue = document.getElementById('fontValue');
-    if (fontSlider && fontValue) {
-        fontSlider.addEventListener('input', (e) => {
-            fontValue.textContent = e.target.value + 'px';
-        });
-    }
-    
-    // Background type
+    // Background type - show/hide color picker
     const backgroundType = document.getElementById('backgroundType');
     const customBgColor = document.getElementById('customBgColor');
     if (backgroundType && customBgColor) {
         backgroundType.addEventListener('change', (e) => {
             customBgColor.style.display = e.target.value === 'custom' ? 'inline' : 'none';
+            updateCanvasBackground(); // Update canvas immediately
         });
     }
 }
+
 
 // Update preview spacing in real-time
 function updatePreviewSpacing(spacing) {
