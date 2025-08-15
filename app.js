@@ -24,7 +24,31 @@ document.addEventListener('DOMContentLoaded', function() {
     
     setupEventListeners();
     showElement('debug');
+
+    // Check library availability
+    checkLibraries();
 });
+
+function checkLibraries() {
+    const libraries = [
+        { name: 'PDF.js', check: () => typeof pdfjsLib !== 'undefined', required: true },
+        { name: 'jsPDF', check: () => typeof window.jspdf !== 'undefined', required: true },
+        { name: 'UTIF (TIFF)', check: () => typeof UTIF !== 'undefined', required: false },
+        { name: 'Tiff.js', check: () => typeof Tiff !== 'undefined', required: false }
+    ];
+    
+    libraries.forEach(lib => {
+        const available = lib.check();
+        const status = available ? '✅' : (lib.required ? '❌' : '⚠️');
+        console.log(`${status} ${lib.name}: ${available ? 'Available' : 'Not loaded'}`);
+    });
+    
+    // Show warning if critical libraries missing
+    const missingRequired = libraries.filter(lib => lib.required && !lib.check());
+    if (missingRequired.length > 0) {
+        console.warn('❌ Critical libraries missing:', missingRequired.map(lib => lib.name).join(', '));
+    }
+}
 
 // Setup event listeners for controls
 function setupEventListeners() {
@@ -719,24 +743,40 @@ function downloadTIFF(canvas, filename) {
     try {
         console.log('🖼️ Generating TIFF...');
         
+        // Check if UTIF library is available
+        if (typeof UTIF === 'undefined') {
+            console.error('❌ UTIF library not loaded');
+            alert('TIFF export not available. The TIFF library failed to load. Try PNG instead.');
+            return;
+        }
+        
         const ctx = canvas.getContext('2d');
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Convert ImageData to RGBA array
         const rgba = new Uint8Array(imageData.data);
         
+        // Create TIFF using UTIF
         const tiffData = UTIF.encodeImage(rgba, canvas.width, canvas.height);
+        
+        // Create blob and download
         const blob = new Blob([tiffData], { type: 'image/tiff' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `${filename}.tiff`;
         link.click();
         
+        // Clean up
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        
         console.log('✅ TIFF generated and downloaded!');
         
     } catch (error) {
         console.error('❌ TIFF generation failed:', error);
-        alert('TIFF generation failed. Try PNG instead.');
+        alert('TIFF generation failed. This might be due to a library issue. Try PNG instead.');
     }
 }
+
 
 // Utility functions
 function clearLayout() { 
