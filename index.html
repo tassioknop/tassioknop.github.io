@@ -162,7 +162,7 @@
                 </label>
                 <label>
                     📝 Font Size: 
-                    <input type="range" id="fontSlider" min="12" max="48" value="16">
+                    <input type="range" id="fontSlider" min="12" max="48" value="16" oninput="document.getElementById('fontValue').textContent = this.value + 'px'; updateCanvasFontSizes();">
                     <span id="fontValue">16px</span>
                 </label>
             </div>
