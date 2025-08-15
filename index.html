@@ -3,30 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chart Layout Tool</title>
+    <title>Chart Layout Tool - Combine Multiple Charts into Professional Layouts</title>
+    <meta name="description" content="Free tool to combine multiple chart images (PNG, JPG, PDF, TIFF) into professional layouts. Perfect for research papers, presentations, and reports.">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
-        <h1>📊 Chart Layout Tool</h1>
+        <header>
+            <h1>📊 Chart Layout Tool</h1>
+            <p class="subtitle">Combine multiple chart images into professional layouts</p>
+        </header>
         
         <!-- File Upload -->
         <div class="upload-section">
-            <input type="file" id="imageUpload" multiple accept="image/*">
-            <p>Upload your chart images (unlimited)</p>
-            <small>Supported formats: PNG, JPG, JPEG, GIF, WebP</small>
+            <input type="file" id="imageUpload" multiple accept="image/*,.pdf,.tiff,.tif">
+            <div class="upload-content">
+                <div class="upload-icon">📁</div>
+                <p><strong>Upload your chart images</strong></p>
+                <p>Supports PNG, JPG, PDF, TIFF • Unlimited files</p>
+                <small>Click to browse or drag & drop files here</small>
+            </div>
         </div>
         
-        <!-- Debug info (can be removed later) -->
-        <div id="debug" style="background: #f0f0f0; padding: 10px; margin: 10px 0; display: none;">
-            <h4>Debug Info:</h4>
-            <p id="debugText">No images uploaded yet</p>
+        <!-- Debug info -->
+        <div id="debug" style="display: none;">
+            <div class="debug-box">
+                <h4>🔧 Debug Info:</h4>
+                <p id="debugText">Ready to upload images</p>
+            </div>
         </div>
         
         <!-- Uploaded Images List -->
         <div id="uploadedImagesSection" style="display: none;">
             <h3>📁 Uploaded Images <span id="imageCount"></span></h3>
-            <p style="color: #666; margin-bottom: 15px;">✏️ Click on any label to edit it</p>
+            <p class="section-description">✏️ Click on any label to edit it</p>
             <div id="uploadedImagesList"></div>
         </div>
         
@@ -101,11 +111,11 @@
         <div class="instructions" id="instructions" style="display: none;">
             <h3>📋 How to Use</h3>
             <ul>
-                <li><strong>🖱️ Drag images</strong> from the uploaded list directly onto the grid slots below</li>
-                <li><strong>🔄 Drag between slots</strong> to reorder your layout</li>
-                <li><strong>🖱️ Right-click</strong> on any slot to remove an image</li>
-                <li><strong>✏️ Edit labels</strong> by clicking the text fields in the uploaded images section</li>
-                <li><strong>⚙️ Customize</strong> spacing, fonts, and background with the controls below</li>
+                <li><strong>📁 Upload</strong> your chart images in any supported format</li>
+                <li><strong>📐 Choose layout</strong> or let the tool auto-arrange them</li>
+                <li><strong>✏️ Edit labels</strong> by clicking the text fields above</li>
+                <li><strong>⚙️ Customize</strong> spacing, fonts, and background below</li>
+                <li><strong>🚀 Generate</strong> and download your combined layout</li>
             </ul>
         </div>
         
@@ -117,18 +127,20 @@
         <!-- Advanced Controls -->
         <div class="advanced-controls" id="advancedControls" style="display: none;">
             <h3>🎨 Customization Options</h3>
+            
             <div class="control-row">
                 <label>
                     📏 Spacing: 
-                    <input type="range" id="spacingSlider" min="5" max="50" value="20">
+                    <input type="range" id="spacingSlider" min="5" max="80" value="20">
                     <span id="spacingValue">20px</span>
                 </label>
                 <label>
                     📝 Font Size: 
-                    <input type="range" id="fontSlider" min="12" max="32" value="16">
+                    <input type="range" id="fontSlider" min="12" max="48" value="16">
                     <span id="fontValue">16px</span>
                 </label>
             </div>
+            
             <div class="control-row">
                 <label>
                     🎯 Label Position: 
@@ -150,46 +162,35 @@
                     <input type="color" id="customBgColor" value="#ffffff" style="display: none; margin-left: 10px;">
                 </label>
             </div>
+            
             <div class="control-row">
                 <label>
-                    📐 Canvas Size: 
-                    <select id="canvasSize">
-                        <option value="small">Small (1200×800)</option>
-                        <option value="medium" selected>Medium (1600×1200)</option>
-                        <option value="large">Large (2400×1800)</option>
-                        <option value="xlarge">X-Large (3200×2400)</option>
+                    🔍 Output Quality: 
+                    <select id="qualitySelect">
+                        <option value="medium">Medium (800×600/cell) - Web</option>
+                        <option value="large" selected>Large (1200×900/cell) - Standard</option>
+                        <option value="xlarge">X-Large (1600×1200/cell) - Print</option>
+                        <option value="ultra">Ultra (2400×1800/cell) - Archive</option>
                     </select>
                 </label>
                 <label>
-                    🖼️ Image Quality: 
-                    <select id="imageQuality">
-                        <option value="0.8">Good</option>
-                        <option value="0.9" selected>High</option>
-                        <option value="1.0">Maximum</option>
+                    📄 PDF DPI: 
+                    <select id="pdfDPI">
+                        <option value="150">150 DPI (Draft)</option>
+                        <option value="300" selected>300 DPI (Print)</option>
+                        <option value="600">600 DPI (High-end)</option>
                     </select>
                 </label>
             </div>
-            <div class="control-row">
-    <label>
-        🔍 Output Quality: 
-        <select id="qualitySelect">
-            <option value="small">Small (400×300 per cell)</option>
-            <option value="medium">Medium (800×600 per cell)</option>
-            <option value="large" selected>Large (1200×900 per cell)</option>
-            <option value="xlarge">X-Large (1600×1200 per cell)</option>
-            <option value="ultra">Ultra (2400×1800 per cell)</option>
-        </select>
-    </label>
-</div>
-</div>
         </div>
         
         <!-- Controls -->
         <div id="controls" style="display: none;">
-            <button onclick="generateImage()" id="generateBtn">🚀 Generate Final Image</button>
-            <button onclick="downloadImage()" id="downloadBtn" disabled>📥 Download PNG</button>
-            <button onclick="clearLayout()" class="secondary-btn">🗑️ Clear Layout</button>
-            <button onclick="resetAll()" class="secondary-btn">🔄 Start Over</button>
+            <div class="control-buttons">
+                <button onclick="generateImage()" id="generateBtn" class="primary-btn">🚀 Generate Final Image</button>
+                <button onclick="clearLayout()" class="secondary-btn">🗑️ Clear Layout</button>
+                <button onclick="resetAll()" class="secondary-btn">🔄 Start Over</button>
+            </div>
         </div>
         
         <!-- Final Image Preview -->
@@ -198,23 +199,52 @@
             <div class="canvas-container">
                 <canvas id="finalCanvas"></canvas>
             </div>
-            <div class="download-options" style="margin-top: 15px;">
-                <button onclick="downloadImage('png')" class="download-btn">📥 Download PNG</button>
-                <button onclick="downloadImage('jpg')" class="download-btn">📥 Download JPG</button>
+            
+            <!-- Success message with donation -->
+            <div class="success-section">
+                <h4>🎉 Perfect! Your chart layout is ready!</h4>
+                <p>Saved you time? Consider supporting this free tool:</p>
+                <a href="https://ko-fi.com/tassio" target="_blank" class="kofi-btn">
+                    ☕ Buy me a coffee
+                </a>
+                <span class="support-text">Every tip helps keep this tool free! 💙</span>
+            </div>
+            
+            <!-- Download Options -->
+            <div class="download-options">
+                <button onclick="downloadImage('png')" class="download-btn">📥 PNG (Web)</button>
+                <button onclick="downloadImage('jpg')" class="download-btn">📥 JPG (Compressed)</button>
+                <button onclick="downloadImage('pdf')" class="download-btn">📄 PDF (Print)</button>
+                <button onclick="downloadImage('tiff')" class="download-btn">🖼️ TIFF (Archive)</button>
                 <button onclick="copyToClipboard()" class="download-btn">📋 Copy to Clipboard</button>
             </div>
-            <script src='https://storage.ko-fi.com/cdn/scripts/overlay-widget.js'></script>
-            <script>
-              kofiWidgetOverlay.draw('tassio', {
-                'type': 'floating-chat',
-                'floating-chat.donateButton.text': 'Tip Me',
-                'floating-chat.donateButton.background-color': '#794bc4',
-                'floating-chat.donateButton.text-color': '#fff'
-              });
-            </script>
         </div>
+        
+        <!-- Footer -->
+        <footer>
+            <p>Made with ❤️ for researchers, scientists, and data enthusiasts</p>
+            <p><small>Free • Open Source • No Data Collected</small></p>
+        </footer>
     </div>
 
-    <script src="script.js"></script>
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tiff.js@0.16.1/tiff.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@4.6.0/UTIF.js"></script>
+    
+    <!-- Main Application -->
+    <script src="app.js"></script>
+    
+    <!-- Ko-fi Floating Widget -->
+    <script src='https://storage.ko-fi.com/cdn/scripts/overlay-widget.js'></script>
+    <script>
+      kofiWidgetOverlay.draw('tassio', {
+        'type': 'floating-chat',
+        'floating-chat.donateButton.text': 'Support Tool',
+        'floating-chat.donateButton.background-color': '#13C3FF',
+        'floating-chat.donateButton.text-color': '#fff'
+      });
+    </script>
 </body>
 </html>
