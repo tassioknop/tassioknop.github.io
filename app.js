@@ -149,6 +149,7 @@ function addLabelToImage(fabricImg) {
     fabricCanvas.add(label);
 }
 
+
 // Position label relative to image
 function positionLabel(label, image, position) {
     const imageLeft = image.left;
@@ -164,8 +165,8 @@ function positionLabel(label, image, position) {
             labelTop = imageTop - 25;
             label.set({ 
                 textAlign: 'center', 
-                originX: 'center',
-                textBaseline: 'alphabetic' // Fix: use valid textBaseline
+                originX: 'center'
+                // Remove textBaseline - Fabric.js handles this automatically
             });
             break;
         case 'top-left':
@@ -173,8 +174,7 @@ function positionLabel(label, image, position) {
             labelTop = imageTop - 25;
             label.set({ 
                 textAlign: 'left', 
-                originX: 'left',
-                textBaseline: 'alphabetic'
+                originX: 'left'
             });
             break;
         case 'top-right':
@@ -182,8 +182,7 @@ function positionLabel(label, image, position) {
             labelTop = imageTop - 25;
             label.set({ 
                 textAlign: 'right', 
-                originX: 'right',
-                textBaseline: 'alphabetic'
+                originX: 'right'
             });
             break;
         case 'bottom':
@@ -191,8 +190,7 @@ function positionLabel(label, image, position) {
             labelTop = imageTop + imageHeight + 20;
             label.set({ 
                 textAlign: 'center', 
-                originX: 'center',
-                textBaseline: 'alphabetic'
+                originX: 'center'
             });
             break;
         case 'bottom-left':
@@ -200,8 +198,7 @@ function positionLabel(label, image, position) {
             labelTop = imageTop + imageHeight + 20;
             label.set({ 
                 textAlign: 'left', 
-                originX: 'left',
-                textBaseline: 'alphabetic'
+                originX: 'left'
             });
             break;
         case 'bottom-right':
@@ -209,8 +206,7 @@ function positionLabel(label, image, position) {
             labelTop = imageTop + imageHeight + 20;
             label.set({ 
                 textAlign: 'right', 
-                originX: 'right',
-                textBaseline: 'alphabetic'
+                originX: 'right'
             });
             break;
         case 'left':
@@ -219,8 +215,7 @@ function positionLabel(label, image, position) {
             label.set({ 
                 textAlign: 'right', 
                 originX: 'right', 
-                originY: 'center',
-                textBaseline: 'alphabetic'
+                originY: 'center'
             });
             break;
         case 'right':
@@ -229,8 +224,7 @@ function positionLabel(label, image, position) {
             label.set({ 
                 textAlign: 'left', 
                 originX: 'left', 
-                originY: 'center',
-                textBaseline: 'alphabetic'
+                originY: 'center'
             });
             break;
         case 'overlay':
@@ -241,16 +235,13 @@ function positionLabel(label, image, position) {
                 originX: 'center',
                 backgroundColor: 'rgba(0,0,0,0.8)',
                 fill: 'white',
-                padding: 5,
-                textBaseline: 'alphabetic'
+                padding: 5
             });
             break;
     }
     
     label.set({ left: labelLeft, top: labelTop });
 }
-
-
 
 function autoArrangeImages() {
     if (!fabricCanvas) return;
