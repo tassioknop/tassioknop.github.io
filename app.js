@@ -1420,20 +1420,18 @@ function updateAllLabelPreviews() {
 function updateCanvasSpacing() {
     if (!fabricCanvas) return;
     
-    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
-    console.log('📏 Updating canvas spacing to:', spacing + 'px');
-    
-    // Re-arrange with new spacing
-    autoArrangeImages();
-    
-    // Update spacing display
-    document.getElementById('spacingValue').textContent = spacing + 'px';
+    updateCanvasWithFeedback(() => {
+        const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+        document.getElementById('spacingValue').textContent = spacing + 'px';
+        autoArrangeImages();
+    }, '📏 Spacing updated');
 }
 
 // Update canvas background in real-time
 function updateCanvasBackground() {
     if (!fabricCanvas) return;
-    
+
+    updateCanvasWithFeedback(() => {
     const backgroundType = document.getElementById('backgroundType')?.value || 'white';
     const customColor = document.getElementById('customBgColor')?.value || '#ffffff';
     
@@ -1456,6 +1454,7 @@ function updateCanvasBackground() {
     
     fabricCanvas.setBackgroundColor(backgroundColor, fabricCanvas.renderAll.bind(fabricCanvas));
     console.log('🎨 Updated canvas background to:', backgroundColor);
+    }, '🎨 Updated canvas background');
 }
 
 // Update canvas quality/size in real-time
@@ -1492,6 +1491,16 @@ function updateCanvasQuality() {
     console.log(`🔍 Updated canvas size to: ${canvasWidth}×${canvasHeight} (${quality})`);
 }
 
+function updateCanvasWithFeedback(updateFunction, message) {
+    const canvas = document.getElementById('layoutCanvas');
+    canvas.classList.add('canvas-updating');
+    
+    setTimeout(() => {
+        updateFunction();
+        canvas.classList.remove('canvas-updating');
+        if (message) console.log(message);
+    }, 50);
+}
 
 
 
