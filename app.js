@@ -39,8 +39,8 @@ function checkLibraries() {
     const libraries = [
         { name: 'PDF.js', check: () => typeof pdfjsLib !== 'undefined', required: true },
         { name: 'jsPDF', check: () => typeof window.jspdf !== 'undefined', required: true },
-        { name: 'UTIF (TIFF)', check: () => typeof UTIF !== 'undefined', required: false },
-        { name: 'Tiff.js', check: () => typeof Tiff !== 'undefined', required: false }
+        { name: 'UTIF (TIFF)', check: () => typeof UTIF !== 'undefined', required: false }
+        // Removed Tiff.js since we're only using UTIF now
     ];
     
     libraries.forEach(lib => {
@@ -55,6 +55,7 @@ function checkLibraries() {
         console.warn('❌ Critical libraries missing:', missingRequired.map(lib => lib.name).join(', '));
     }
 }
+
 
 // Setup event listeners for controls
 function setupEventListeners() {
@@ -213,16 +214,43 @@ function processPDF(file, index, callback) {
     reader.readAsArrayBuffer(file);
 }
 
-// Process TIFF files
+// Process TIFF files using UTIF
 function processTIFF(file, index, callback) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
             console.log(`🖼️ Converting TIFF: ${file.name}`);
             
-            const tiff = new Tiff({ buffer: e.target.result });
-            const canvas = tiff.toCanvas();
+            // Check if UTIF is available
+            if (typeof UTIF === 'undefined') {
+                throw new Error('UTIF library not available');
+            }
             
+            // Parse TIFF using UTIF
+            const ifds = UTIF.decode(e.target.result);
+            console.log(`📖 TIFF has ${ifds.length} image(s)`);
+            
+            // Use first image
+            const firstImage = ifds[0];
+            UTIF.decodeImage(e.target.result, firstImage);
+            
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = firstImage.width;
+            canvas.height = firstImage.height;
+            const ctx = canvas.getContext('2d');
+            
+            // Create image data
+            const imageData = ctx.createImageData(firstImage.width, firstImage.height);
+            
+            // Convert RGBA data
+            const rgba = new Uint8ClampedArray(firstImage.data);
+            imageData.data.set(rgba);
+            
+            // Put image data on canvas
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Convert to regular image
             const img = new Image();
             img.onload = function() {
                 images.push({
@@ -237,15 +265,29 @@ function processTIFF(file, index, callback) {
                 console.log(`✅ TIFF processed: ${file.name}`);
                 callback();
             };
+            
+            img.onerror = function() {
+                console.error(`❌ Failed to create image from TIFF: ${file.name}`);
+                callback();
+            };
+            
             img.src = canvas.toDataURL('image/png');
             
         } catch (error) {
             console.error(`❌ Failed to process TIFF ${file.name}:`, error);
-            callback();
+            console.log('📝 TIFF processing failed, but continuing...');
+            callback(); // Continue processing other files
         }
     };
+    
+    reader.onerror = function() {
+        console.error(`❌ Failed to read file: ${file.name}`);
+        callback();
+    };
+    
     reader.readAsArrayBuffer(file);
 }
+
 
 // Display uploaded images
 function showImages() {
