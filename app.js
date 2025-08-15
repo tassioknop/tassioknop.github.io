@@ -245,31 +245,43 @@ function onDoubleClick(e) {
 }
 
 // Canvas control functions
-function autoArrangeImages() {
-    if (!fabricCanvas) return;
+// Arrange images in specific grid layout on canvas
+function autoArrangeImagesInGrid(cols, rows) {
+    if (!fabricCanvas || canvasObjects.length === 0) return;
     
     const canvasWidth = fabricCanvas.getWidth();
     const canvasHeight = fabricCanvas.getHeight();
-    const objects = canvasObjects;
-    
-    if (objects.length === 0) return;
-    
-    const cols = Math.ceil(Math.sqrt(objects.length));
-    const rows = Math.ceil(objects.length / cols);
     
     const cellWidth = canvasWidth / cols;
     const cellHeight = canvasHeight / rows;
     const padding = 20;
     
-    objects.forEach((obj, index) => {
+    canvasObjects.forEach((obj, index) => {
+        if (index >= cols * rows) return; // Skip excess images
+        
         const row = Math.floor(index / cols);
         const col = index % cols;
         
         const x = (col * cellWidth) + padding;
         const y = (row * cellHeight) + padding;
+        const maxWidth = cellWidth - (padding * 2);
+        const maxHeight = cellHeight - (padding * 2);
         
-        obj.set({ left: x, top: y });
+        // Scale to fit cell
+        const scale = Math.min(
+            maxWidth / obj.width,
+            maxHeight / obj.height,
+            1
+        );
         
+        obj.set({ 
+            left: x, 
+            top: y,
+            scaleX: scale,
+            scaleY: scale
+        });
+        
+        // Update label position
         if (obj.label) {
             const position = document.getElementById('labelPosition')?.value || 'bottom';
             positionLabel(obj.label, obj, position);
@@ -277,8 +289,31 @@ function autoArrangeImages() {
     });
     
     fabricCanvas.renderAll();
-    console.log('📐 Auto-arranged images');
+    console.log(`📐 Arranged ${canvasObjects.length} images in ${cols}×${rows} grid`);
 }
+
+// Update all labels when position setting changes
+function updateAllCanvasLabels() {
+    if (!fabricCanvas) return;
+    
+    const position = document.getElementById('labelPosition')?.value || 'bottom';
+    console.log('🏷️ Updating all canvas labels to:', position);
+    
+    canvasObjects.forEach(obj => {
+        if (obj.label) {
+            // Remove old label
+            fabricCanvas.remove(obj.label);
+        }
+        
+        // Add new label with updated position
+        if (position !== 'none') {
+            addLabelToImage(obj);
+        }
+    });
+    
+    fabricCanvas.renderAll();
+}
+
 
 function resetCanvasLayout() {
     addImagesToCanvas();
@@ -656,7 +691,8 @@ function showControls() {
         }
     });
     
-    // Show canvas instead of grid
+    // HIDE old preview and SHOW canvas
+    document.getElementById('layoutPreview').style.display = 'none';
     document.getElementById('canvasSection').style.display = 'block';
     document.getElementById('canvasSection').classList.add('fade-in');
     
@@ -668,6 +704,7 @@ function showControls() {
     
     updateAutoLayoutInfo();
 }
+
 
 // Utility function to show elements
 function showElement(id) {
@@ -697,8 +734,12 @@ function autoSetLayout() {
     else if (count <= 12) { currentCols = 4; currentRows = 3; }
     else { currentCols = 4; currentRows = 4; }
     
-    createGrid();
+    // Use canvas instead of grid
+    if (fabricCanvas) {
+        addImagesToCanvas();
+    }
 }
+
 
 // Create layout grid
 function createGrid() {
@@ -887,6 +928,8 @@ function renameImage(index, newName) {
 
 // Set specific layout
 function setLayout(cols, rows) {
+    console.log('🔧 Setting layout:', cols, 'x', rows);
+    
     // Update active button
     document.querySelectorAll('#presetLayouts button').forEach(btn => {
         btn.classList.remove('active');
@@ -897,9 +940,13 @@ function setLayout(cols, rows) {
     
     currentCols = cols;
     currentRows = rows;
-    slots = {}; // Clear assignments
-    createGrid();
+    
+    // Use canvas instead of old grid
+    if (fabricCanvas) {
+        autoArrangeImagesInGrid(cols, rows);
+    }
 }
+
 
 // Layout type functions
 function updateLayoutType() {
