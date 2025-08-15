@@ -799,4 +799,21 @@ footer p {
     margin-bottom: 5px;
 }
 
+.control-row input[type="range"]:active,
+.control-row select:focus,
+.control-row input[type="color"]:active {
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    border-color: #667eea;
+}
+
+/* Canvas update animation */
+#layoutCanvas {
+    transition: all 0.2s ease;
+}
+
+.canvas-updating {
+    opacity: 0.8;
+}
+
+
 
