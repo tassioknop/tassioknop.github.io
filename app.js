@@ -588,10 +588,14 @@ function generateImage() {
 
 // Draw image with label
 function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, fontSize) {
-    const padding = Math.max(20, cellW * 0.05);
+    // Get user's spacing setting for internal padding too
+    const userSpacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    
+    // Make internal padding responsive to user's spacing choice
+    const padding = Math.max(userSpacing, cellW * 0.02); // Reduced from 0.05 to 0.02
     const labelHeight = fontSize + 10;
     
-    console.log(`🖼️ Drawing ${img.name} with ${fontSize}px font at ${labelPosition}`);
+    console.log(`🖼️ Drawing ${img.name} with ${fontSize}px font at ${labelPosition} (padding: ${padding}px)`);
     
     // Calculate available space
     let imageX = x + padding;
@@ -664,9 +668,10 @@ function drawImageWithLabel(ctx, img, x, y, cellW, cellH, labelPosition, fontSiz
         }
         
         ctx.fillText(img.name, labelX, labelY);
-        console.log(`📝 Drew label "${img.name}" at ${labelPosition}`);
+        console.log(`📝 Drew label "${img.name}" at ${labelPosition} with ${padding}px internal padding`);
     }
 }
+
 
 // Download functions
 function downloadImage(format = 'png') {
