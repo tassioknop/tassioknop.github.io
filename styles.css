@@ -727,3 +727,34 @@ footer p {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Label Preview Styles */
+.chart-preview-label {
+    pointer-events: none; /* Don't interfere with clicking */
+    font-family: Arial, sans-serif;
+    font-weight: 500;
+    line-height: 1.2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.chart-slot.has-image {
+    border-color: #00b894;
+    border-style: solid;
+    background: white;
+    padding: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    position: relative; /* Ensure labels position correctly */
+}
+
+.chart-slot.has-image select {
+    position: relative;
+    z-index: 3;
+    margin-top: 15px;
+    padding: 8px 12px;
+    width: calc(100% - 20px);
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+}
+
