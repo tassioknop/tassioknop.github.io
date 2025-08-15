@@ -1,4 +1,10 @@
-// Chart Layout Tool
+/*!
+ * Chart Layout Tool
+ * Copyright (c) 2025 Tassio Knop
+ * Licensed under MIT License
+ * https://github.com/yourusername/chart-layout-tool
+ */
+
 // Configure PDF.js
 if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
