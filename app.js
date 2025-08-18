@@ -611,7 +611,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     setupEventListeners();
-    showElement('debug');
 
     // Check library availability
     checkLibraries();
@@ -656,9 +655,7 @@ function setupEventListeners() {
 function handleFiles(event) {
     const files = Array.from(event.target.files);
     console.log(`📁 Processing ${files.length} files`);
-    
-    updateDebug(`Processing ${files.length} files...`);
-    
+        
     let processedCount = 0;
     const totalFiles = files.length;
     
@@ -688,7 +685,6 @@ function handleFiles(event) {
 
 // Update processing progress
 function updateProgress(processed, total) {
-    updateDebug(`Processed ${processed}/${total} files...`);
     
     if (processed === total) {
         console.log('✅ All files processed!');
@@ -928,12 +924,6 @@ function showElement(id) {
         el.style.display = 'block';
         console.log('✅ Showed element:', id);
     }
-}
-
-// Update debug display
-function updateDebug(text) {
-    const debug = document.getElementById('debugText');
-    if (debug) debug.textContent = text;
 }
 
 // Auto-set optimal layout
@@ -1426,8 +1416,6 @@ function resetAll() {
         // Reset file input
         const fileInput = document.getElementById('imageUpload');
         if (fileInput) fileInput.value = '';
-        
-        updateDebug('Ready to upload new images');
     }
 }
 
