@@ -124,7 +124,7 @@
         <div id="canvasSection" style="display: none;">
             <h3>🎨 Interactive Layout Editor</h3>
             <div class="canvas-controls">
-                <button onclick="autoArrangeImages()" class="secondary-btn">📐 Auto Arrange</button>
+                <button onclick="autoArrangeImagesWithLabels()" class="secondary-btn">📐 Auto Arrange</button>
                 <button onclick="resetCanvasLayout()" class="secondary-btn">🔄 Reset Layout</button>
                 <button onclick="addGridLines()" class="secondary-btn">📏 Toggle Grid</button>
             </div>
@@ -167,11 +167,11 @@
             <label>
                 🎯 Label Position: 
                 <select id="labelPosition" onchange="updateAllCanvasLabels()">
+                    <option value="top-left" selected>Top Left</option>
                     <option value="bottom">Bottom (center)</option>
                     <option value="top">Top (center)</option>
                     <option value="bottom-left">Bottom Left</option>
                     <option value="bottom-right">Bottom Right</option>
-                    <option value="top-left">Top Left</option>
                     <option value="top-right">Top Right</option>
                     <option value="left">Left (middle)</option>
                     <option value="right">Right (middle)</option>
