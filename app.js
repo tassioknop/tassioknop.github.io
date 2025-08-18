@@ -502,15 +502,6 @@ function setupEventListeners() {
     }
 }
 
-
-// Update preview spacing in real-time
-function updatePreviewSpacing(spacing) {
-    const preview = document.getElementById('layoutPreview');
-    if (preview) {
-        preview.style.gap = spacing + 'px';
-    }
-}
-
 // Handle file uploads
 function handleFiles(event) {
     const files = Array.from(event.target.files);
@@ -763,10 +754,11 @@ function showControls() {
         }
     });
     
-    // HIDE old preview and SHOW canvas
-    document.getElementById('layoutPreview').style.display = 'none';
-    document.getElementById('canvasSection').style.display = 'block';
-    document.getElementById('canvasSection').classList.add('fade-in');
+    const canvasSection = document.getElementById('canvasSection');
+    if (canvasSection) {
+        canvasSection.style.display = 'block';
+        canvasSection.classList.add('fade-in');
+    }
     
     // Initialize interactive canvas
     setTimeout(() => {
@@ -776,6 +768,7 @@ function showControls() {
     
     updateAutoLayoutInfo();
 }
+
 
 
 // Utility function to show elements
