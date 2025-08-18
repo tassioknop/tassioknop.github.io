@@ -62,7 +62,7 @@ function initializeCanvas() {
     console.log(`🎨 Canvas initialized: ${canvasWidth}×${canvasHeight}`);
 }
 
-// Add images to canvas automatically
+// Add images to canvas automatically with label space reserved
 function addImagesToCanvas() {
     if (!fabricCanvas || images.length === 0) return;
     
@@ -76,18 +76,46 @@ function addImagesToCanvas() {
     const cols = Math.ceil(Math.sqrt(images.length));
     const rows = Math.ceil(images.length / cols);
     
-    const cellWidth = canvasWidth / cols;
-    const cellHeight = canvasHeight / rows;
-    const padding = 20;
+    // Get spacing and label settings
+    const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    const labelPosition = document.getElementById('labelPosition')?.value || 'top-left';
+    const labelDistance = 25;
+    
+    // Calculate extra space needed for labels
+    let extraSpaceTop = 0, extraSpaceBottom = 0, extraSpaceLeft = 0, extraSpaceRight = 0;
+    
+    if (labelPosition.includes('top')) {
+        extraSpaceTop = labelDistance + 20;
+    }
+    if (labelPosition.includes('bottom')) {
+        extraSpaceBottom = labelDistance + 20;
+    }
+    if (labelPosition.includes('left') || labelPosition === 'left') {
+        extraSpaceLeft = 80;
+    }
+    if (labelPosition.includes('right') || labelPosition === 'right') {
+        extraSpaceRight = 80;
+    }
+    
+    // Calculate available space after accounting for labels
+    const availableWidth = canvasWidth - (spacing * (cols + 1)) - extraSpaceLeft - extraSpaceRight;
+    const availableHeight = canvasHeight - (spacing * (rows + 1)) - extraSpaceTop - extraSpaceBottom;
+    
+    const cellWidth = availableWidth / cols;
+    const cellHeight = availableHeight / rows;
+    
+    console.log(`🔧 Initial layout: ${cols}×${rows}, Cell: ${cellWidth.toFixed(0)}×${cellHeight.toFixed(0)}, Label space reserved`);
     
     images.forEach((img, index) => {
         const row = Math.floor(index / cols);
         const col = index % cols;
         
-        const x = (col * cellWidth) + padding;
-        const y = (row * cellHeight) + padding;
-        const maxWidth = cellWidth - (padding * 2);
-        const maxHeight = cellHeight - (padding * 2);
+        // Position with label space reserved
+        const x = spacing + extraSpaceLeft + (col * (cellWidth + spacing));
+        const y = spacing + extraSpaceTop + (row * (cellHeight + spacing));
+        
+        const maxWidth = cellWidth - (spacing * 0.5);
+        const maxHeight = cellHeight - (spacing * 0.5);
         
         // Create fabric image object
         fabric.Image.fromURL(img.src, (fabricImg) => {
@@ -119,15 +147,123 @@ function addImagesToCanvas() {
             fabricCanvas.add(fabricImg);
             canvasObjects.push(fabricImg);
             
-            // Add label if needed
-            addLabelToImage(fabricImg);
+            // Add label with proper positioning
+            if (labelPosition !== 'none') {
+                addLabelWithReservedSpace(fabricImg, labelPosition, labelDistance);
+            }
             
-            console.log(`✅ Added ${img.name} to canvas at (${x}, ${y})`);
+            console.log(`✅ Added ${img.name} to canvas at (${x.toFixed(0)}, ${y.toFixed(0)}) with label space`);
         });
     });
     
     fabricCanvas.renderAll();
 }
+
+// Add label to image within reserved grid space
+function addLabelWithReservedSpace(fabricImg, labelPosition, labelDistance) {
+    const fontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
+    const label = new fabric.Text(fabricImg.imageData.name, {
+        fontSize: fontSize,
+        fill: 'black',
+        fontFamily: 'Arial',
+        selectable: false,
+        evented: false
+    });
+    
+    // Position label within the reserved space
+    const imageLeft = fabricImg.left;
+    const imageTop = fabricImg.top;
+    const imageWidth = fabricImg.getScaledWidth();
+    const imageHeight = fabricImg.getScaledHeight();
+    
+    let labelLeft, labelTop;
+    let labelOriginX = 'center', labelOriginY = 'top', labelTextAlign = 'center';
+    
+    switch (labelPosition) {
+        case 'top':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop - labelDistance;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
+            break;
+            
+        case 'top-left':
+            labelLeft = imageLeft;
+            labelTop = imageTop - labelDistance;
+            labelOriginX = 'left';
+            labelTextAlign = 'left';
+            break;
+            
+        case 'top-right':
+            labelLeft = imageLeft + imageWidth;
+            labelTop = imageTop - labelDistance;
+            labelOriginX = 'right';
+            labelTextAlign = 'right';
+            break;
+            
+        case 'bottom':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
+            break;
+            
+        case 'bottom-left':
+            labelLeft = imageLeft;
+            labelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'left';
+            labelTextAlign = 'left';
+            break;
+            
+        case 'bottom-right':
+            labelLeft = imageLeft + imageWidth;
+            labelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'right';
+            labelTextAlign = 'right';
+            break;
+            
+        case 'left':
+            labelLeft = imageLeft - labelDistance;
+            labelTop = imageTop + imageHeight / 2;
+            labelOriginX = 'right';
+            labelOriginY = 'center';
+            labelTextAlign = 'right';
+            break;
+            
+        case 'right':
+            labelLeft = imageLeft + imageWidth + labelDistance;
+            labelTop = imageTop + imageHeight / 2;
+            labelOriginX = 'left';
+            labelOriginY = 'center';
+            labelTextAlign = 'left';
+            break;
+            
+        case 'overlay':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop + imageHeight - 15;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
+            label.set({ 
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                fill: 'white',
+                padding: 5
+            });
+            break;
+    }
+    
+    // Apply positioning
+    label.set({ 
+        left: labelLeft, 
+        top: labelTop,
+        textAlign: labelTextAlign,
+        originX: labelOriginX,
+        originY: labelOriginY
+    });
+    
+    fabricImg.label = label;
+    fabricCanvas.add(label);
+}
+
 
 // Add label to image
 function addLabelToImage(fabricImg) {
