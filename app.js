@@ -152,66 +152,77 @@ function addLabelToImage(fabricImg) {
 
 
 // Position label relative to image
+// Position label relative to image with bounds checking
 function positionLabel(label, image, position) {
     const imageLeft = image.left;
     const imageTop = image.top;
     const imageWidth = image.getScaledWidth();
     const imageHeight = image.getScaledHeight();
     
+    // Get canvas dimensions for bounds checking
+    const canvasWidth = fabricCanvas.getWidth();
+    const canvasHeight = fabricCanvas.getHeight();
+    const labelPadding = 10; // Minimum distance from canvas edges
+    
     let labelLeft, labelTop;
     
     switch (position) {
         case 'top':
             labelLeft = imageLeft + imageWidth / 2;
-            labelTop = imageTop - 25;
+            labelTop = Math.max(labelPadding + 16, imageTop - 10); // Keep within canvas top
             label.set({ 
                 textAlign: 'center', 
                 originX: 'center'
-                // Remove textBaseline - Fabric.js handles this automatically
             });
             break;
+            
         case 'top-left':
-            labelLeft = imageLeft;
-            labelTop = imageTop - 25;
+            labelLeft = Math.max(labelPadding, imageLeft);
+            labelTop = Math.max(labelPadding + 16, imageTop - 10); // Keep within canvas top
             label.set({ 
                 textAlign: 'left', 
                 originX: 'left'
             });
             break;
+            
         case 'top-right':
-            labelLeft = imageLeft + imageWidth;
-            labelTop = imageTop - 25;
+            labelLeft = Math.min(canvasWidth - labelPadding, imageLeft + imageWidth);
+            labelTop = Math.max(labelPadding + 16, imageTop - 10); // Keep within canvas top
             label.set({ 
                 textAlign: 'right', 
                 originX: 'right'
             });
             break;
+            
         case 'bottom':
             labelLeft = imageLeft + imageWidth / 2;
-            labelTop = imageTop + imageHeight + 20;
+            labelTop = Math.min(canvasHeight - labelPadding, imageTop + imageHeight + 20);
             label.set({ 
                 textAlign: 'center', 
                 originX: 'center'
             });
             break;
+            
         case 'bottom-left':
-            labelLeft = imageLeft;
-            labelTop = imageTop + imageHeight + 20;
+            labelLeft = Math.max(labelPadding, imageLeft);
+            labelTop = Math.min(canvasHeight - labelPadding, imageTop + imageHeight + 20);
             label.set({ 
                 textAlign: 'left', 
                 originX: 'left'
             });
             break;
+            
         case 'bottom-right':
-            labelLeft = imageLeft + imageWidth;
-            labelTop = imageTop + imageHeight + 20;
+            labelLeft = Math.min(canvasWidth - labelPadding, imageLeft + imageWidth);
+            labelTop = Math.min(canvasHeight - labelPadding, imageTop + imageHeight + 20);
             label.set({ 
                 textAlign: 'right', 
                 originX: 'right'
             });
             break;
+            
         case 'left':
-            labelLeft = imageLeft - 10;
+            labelLeft = Math.max(labelPadding, imageLeft - 10);
             labelTop = imageTop + imageHeight / 2;
             label.set({ 
                 textAlign: 'right', 
@@ -219,8 +230,9 @@ function positionLabel(label, image, position) {
                 originY: 'center'
             });
             break;
+            
         case 'right':
-            labelLeft = imageLeft + imageWidth + 10;
+            labelLeft = Math.min(canvasWidth - labelPadding, imageLeft + imageWidth + 10);
             labelTop = imageTop + imageHeight / 2;
             label.set({ 
                 textAlign: 'left', 
@@ -228,6 +240,7 @@ function positionLabel(label, image, position) {
                 originY: 'center'
             });
             break;
+            
         case 'overlay':
             labelLeft = imageLeft + imageWidth / 2;
             labelTop = imageTop + imageHeight - 15;
@@ -243,6 +256,7 @@ function positionLabel(label, image, position) {
     
     label.set({ left: labelLeft, top: labelTop });
 }
+
 
 function autoArrangeImages() {
     if (!fabricCanvas) return;
