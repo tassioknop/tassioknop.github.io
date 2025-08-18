@@ -131,7 +131,7 @@ function addImagesToCanvas() {
 
 // Add label to image
 function addLabelToImage(fabricImg) {
-    const labelPosition = document.getElementById('labelPosition')?.value || 'bottom';
+    const labelPosition = document.getElementById('labelPosition')?.value || 'top-left';
     if (labelPosition === 'none') return;
     
     const fontSize = parseInt(document.getElementById('fontSlider')?.value || 16);
@@ -364,7 +364,7 @@ function autoArrangeImagesWithLabels() {
     // Then adjust each image for label positioning
     canvasObjects.forEach(obj => {
         if (obj.label) {
-            const position = document.getElementById('labelPosition')?.value || 'bottom';
+            const position = document.getElementById('labelPosition')?.value || 'top-left';
             positionLabel(obj.label, obj, position);
         }
     });
@@ -417,7 +417,7 @@ function autoArrangeImages() {
         });
         
         if (obj.label) {
-            const position = document.getElementById('labelPosition')?.value || 'bottom';
+            const position = document.getElementById('labelPosition')?.value || 'top-left';
             positionLabel(obj.label, obj, position);
         }
     });
@@ -468,7 +468,7 @@ function autoArrangeImagesInGrid(cols, rows) {
         
         // Update label position
         if (obj.label) {
-            const position = document.getElementById('labelPosition')?.value || 'bottom';
+            const position = document.getElementById('labelPosition')?.value || 'top-left';
             positionLabel(obj.label, obj, position);
         }
     });
@@ -482,7 +482,7 @@ function autoArrangeImagesInGrid(cols, rows) {
 function updateAllCanvasLabels() {
     if (!fabricCanvas) return;
     
-    const position = document.getElementById('labelPosition')?.value || 'bottom';
+    const position = document.getElementById('labelPosition')?.value || 'top-left';
     console.log('🏷️ Updating all canvas labels to:', position);
     
     canvasObjects.forEach(obj => {
@@ -505,7 +505,7 @@ function updateAllCanvasLabels() {
 function onObjectModified(e) {
     const obj = e.target;
     if (obj.label) {
-        const position = document.getElementById('labelPosition')?.value || 'bottom';
+        const position = document.getElementById('labelPosition')?.value || 'top-left';
         positionLabel(obj.label, obj, position);
         fabricCanvas.renderAll();
     }
@@ -521,7 +521,7 @@ function onObjectScaling(e) {
     // Update label position while scaling
     const obj = e.target;
     if (obj.label) {
-        const position = document.getElementById('labelPosition')?.value || 'bottom';
+        const position = document.getElementById('labelPosition')?.value || 'top-left';
         positionLabel(obj.label, obj, position);
         fabricCanvas.renderAll();
     }
@@ -531,7 +531,7 @@ function onObjectRotating(e) {
     // Update label position while rotating
     const obj = e.target;
     if (obj.label) {
-        const position = document.getElementById('labelPosition')?.value || 'bottom';
+        const position = document.getElementById('labelPosition')?.value || 'top-left';
         positionLabel(obj.label, obj, position);
         fabricCanvas.renderAll();
     }
