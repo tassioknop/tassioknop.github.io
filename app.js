@@ -151,102 +151,190 @@ function addLabelToImage(fabricImg) {
 }
 
 
-// Position label relative to image
-// Position label relative to image with bounds checking
+// Position label relative to image, moving image if label would be cropped
 function positionLabel(label, image, position) {
-    const imageLeft = image.left;
-    const imageTop = image.top;
-    const imageWidth = image.getScaledWidth();
-    const imageHeight = image.getScaledHeight();
-    
-    // Get canvas dimensions for bounds checking
     const canvasWidth = fabricCanvas.getWidth();
     const canvasHeight = fabricCanvas.getHeight();
     const labelPadding = 10; // Minimum distance from canvas edges
+    const labelDistance = 25; // Fixed distance between image and label
     
-    let labelLeft, labelTop;
+    // Get image dimensions and current position
+    let imageLeft = image.left;
+    let imageTop = image.top;
+    const imageWidth = image.getScaledWidth();
+    const imageHeight = image.getScaledHeight();
+    
+    // Calculate ideal label position (without bounds checking)
+    let idealLabelLeft, idealLabelTop;
+    let labelOriginX = 'center', labelOriginY = 'top', labelTextAlign = 'center';
     
     switch (position) {
         case 'top':
-            labelLeft = imageLeft + imageWidth / 2;
-            labelTop = Math.max(labelPadding + 16, imageTop - 10); // Keep within canvas top
-            label.set({ 
-                textAlign: 'center', 
-                originX: 'center'
-            });
+            idealLabelLeft = imageLeft + imageWidth / 2;
+            idealLabelTop = imageTop - labelDistance;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
             break;
             
         case 'top-left':
-            labelLeft = Math.max(labelPadding, imageLeft);
-            labelTop = Math.max(labelPadding + 16, imageTop - 10); // Keep within canvas top
-            label.set({ 
-                textAlign: 'left', 
-                originX: 'left'
-            });
+            idealLabelLeft = imageLeft;
+            idealLabelTop = imageTop - labelDistance;
+            labelOriginX = 'left';
+            labelTextAlign = 'left';
             break;
             
         case 'top-right':
-            labelLeft = Math.min(canvasWidth - labelPadding, imageLeft + imageWidth);
-            labelTop = Math.max(labelPadding + 16, imageTop - 10); // Keep within canvas top
-            label.set({ 
-                textAlign: 'right', 
-                originX: 'right'
-            });
+            idealLabelLeft = imageLeft + imageWidth;
+            idealLabelTop = imageTop - labelDistance;
+            labelOriginX = 'right';
+            labelTextAlign = 'right';
             break;
             
         case 'bottom':
-            labelLeft = imageLeft + imageWidth / 2;
-            labelTop = Math.min(canvasHeight - labelPadding, imageTop + imageHeight + 20);
-            label.set({ 
-                textAlign: 'center', 
-                originX: 'center'
-            });
+            idealLabelLeft = imageLeft + imageWidth / 2;
+            idealLabelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
             break;
             
         case 'bottom-left':
-            labelLeft = Math.max(labelPadding, imageLeft);
-            labelTop = Math.min(canvasHeight - labelPadding, imageTop + imageHeight + 20);
-            label.set({ 
-                textAlign: 'left', 
-                originX: 'left'
-            });
+            idealLabelLeft = imageLeft;
+            idealLabelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'left';
+            labelTextAlign = 'left';
             break;
             
         case 'bottom-right':
-            labelLeft = Math.min(canvasWidth - labelPadding, imageLeft + imageWidth);
-            labelTop = Math.min(canvasHeight - labelPadding, imageTop + imageHeight + 20);
-            label.set({ 
-                textAlign: 'right', 
-                originX: 'right'
-            });
+            idealLabelLeft = imageLeft + imageWidth;
+            idealLabelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'right';
+            labelTextAlign = 'right';
             break;
             
         case 'left':
-            labelLeft = Math.max(labelPadding, imageLeft - 10);
-            labelTop = imageTop + imageHeight / 2;
-            label.set({ 
-                textAlign: 'right', 
-                originX: 'right', 
-                originY: 'center'
-            });
+            idealLabelLeft = imageLeft - labelDistance;
+            idealLabelTop = imageTop + imageHeight / 2;
+            labelOriginX = 'right';
+            labelOriginY = 'center';
+            labelTextAlign = 'right';
             break;
             
         case 'right':
-            labelLeft = Math.min(canvasWidth - labelPadding, imageLeft + imageWidth + 10);
-            labelTop = imageTop + imageHeight / 2;
-            label.set({ 
-                textAlign: 'left', 
-                originX: 'left', 
-                originY: 'center'
-            });
+            idealLabelLeft = imageLeft + imageWidth + labelDistance;
+            idealLabelTop = imageTop + imageHeight / 2;
+            labelOriginX = 'left';
+            labelOriginY = 'center';
+            labelTextAlign = 'left';
             break;
             
         case 'overlay':
-            labelLeft = imageLeft + imageWidth / 2;
-            labelTop = imageTop + imageHeight - 15;
+            // Overlay doesn't need repositioning
+            idealLabelLeft = imageLeft + imageWidth / 2;
+            idealLabelTop = imageTop + imageHeight - 15;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
+            break;
+    }
+    
+    // Check if label would be outside canvas bounds and calculate needed image movement
+    let moveImageX = 0, moveImageY = 0;
+    
+    if (position !== 'overlay') {
+        const labelWidth = 100; // Approximate label width for bounds checking
+        const labelHeight = 20; // Approximate label height
+        
+        // Check horizontal bounds
+        if (labelOriginX === 'left' && idealLabelLeft < labelPadding) {
+            moveImageX = labelPadding - idealLabelLeft;
+        } else if (labelOriginX === 'right' && idealLabelLeft > canvasWidth - labelPadding) {
+            moveImageX = (canvasWidth - labelPadding) - idealLabelLeft;
+        } else if (labelOriginX === 'center') {
+            if (idealLabelLeft - labelWidth/2 < labelPadding) {
+                moveImageX = labelPadding - (idealLabelLeft - labelWidth/2);
+            } else if (idealLabelLeft + labelWidth/2 > canvasWidth - labelPadding) {
+                moveImageX = (canvasWidth - labelPadding) - (idealLabelLeft + labelWidth/2);
+            }
+        }
+        
+        // Check vertical bounds
+        if (labelOriginY === 'top' && idealLabelTop - labelHeight < labelPadding) {
+            moveImageY = (labelPadding + labelHeight) - idealLabelTop;
+        } else if (labelOriginY === 'center' && idealLabelTop - labelHeight/2 < labelPadding) {
+            moveImageY = (labelPadding + labelHeight/2) - idealLabelTop;
+        } else if (idealLabelTop > canvasHeight - labelPadding) {
+            moveImageY = (canvasHeight - labelPadding) - idealLabelTop;
+        }
+        
+        // Also ensure image itself stays within bounds
+        const newImageLeft = imageLeft + moveImageX;
+        const newImageTop = imageTop + moveImageY;
+        
+        if (newImageLeft < labelPadding) {
+            moveImageX += labelPadding - newImageLeft;
+        } else if (newImageLeft + imageWidth > canvasWidth - labelPadding) {
+            moveImageX -= (newImageLeft + imageWidth) - (canvasWidth - labelPadding);
+        }
+        
+        if (newImageTop < labelPadding) {
+            moveImageY += labelPadding - newImageTop;
+        } else if (newImageTop + imageHeight > canvasHeight - labelPadding) {
+            moveImageY -= (newImageTop + imageHeight) - (canvasHeight - labelPadding);
+        }
+    }
+    
+    // Move the image if necessary
+    if (moveImageX !== 0 || moveImageY !== 0) {
+        console.log(`📦 Moving image "${image.imageData.name}" by (${moveImageX.toFixed(1)}, ${moveImageY.toFixed(1)}) to fit label`);
+        image.set({
+            left: imageLeft + moveImageX,
+            top: imageTop + moveImageY
+        });
+        
+        // Update image position variables for label calculation
+        imageLeft += moveImageX;
+        imageTop += moveImageY;
+    }
+    
+    // Now calculate final label position based on (possibly moved) image
+    let finalLabelLeft, finalLabelTop;
+    
+    switch (position) {
+        case 'top':
+            finalLabelLeft = imageLeft + imageWidth / 2;
+            finalLabelTop = imageTop - labelDistance;
+            break;
+        case 'top-left':
+            finalLabelLeft = imageLeft;
+            finalLabelTop = imageTop - labelDistance;
+            break;
+        case 'top-right':
+            finalLabelLeft = imageLeft + imageWidth;
+            finalLabelTop = imageTop - labelDistance;
+            break;
+        case 'bottom':
+            finalLabelLeft = imageLeft + imageWidth / 2;
+            finalLabelTop = imageTop + imageHeight + labelDistance;
+            break;
+        case 'bottom-left':
+            finalLabelLeft = imageLeft;
+            finalLabelTop = imageTop + imageHeight + labelDistance;
+            break;
+        case 'bottom-right':
+            finalLabelLeft = imageLeft + imageWidth;
+            finalLabelTop = imageTop + imageHeight + labelDistance;
+            break;
+        case 'left':
+            finalLabelLeft = imageLeft - labelDistance;
+            finalLabelTop = imageTop + imageHeight / 2;
+            break;
+        case 'right':
+            finalLabelLeft = imageLeft + imageWidth + labelDistance;
+            finalLabelTop = imageTop + imageHeight / 2;
+            break;
+        case 'overlay':
+            finalLabelLeft = imageLeft + imageWidth / 2;
+            finalLabelTop = imageTop + imageHeight - 15;
             label.set({ 
-                textAlign: 'center', 
-                originX: 'center',
                 backgroundColor: 'rgba(0,0,0,0.8)',
                 fill: 'white',
                 padding: 5
@@ -254,7 +342,34 @@ function positionLabel(label, image, position) {
             break;
     }
     
-    label.set({ left: labelLeft, top: labelTop });
+    // Apply label positioning
+    label.set({ 
+        left: finalLabelLeft, 
+        top: finalLabelTop,
+        textAlign: labelTextAlign,
+        originX: labelOriginX,
+        originY: labelOriginY
+    });
+}
+
+// Auto-arrange all images to fit with their labels
+function autoArrangeImagesWithLabels() {
+    if (!fabricCanvas || canvasObjects.length === 0) return;
+    
+    console.log('📐 Auto-arranging images with label spacing...');
+    
+    // First do normal arrangement
+    autoArrangeImages();
+    
+    // Then adjust each image for label positioning
+    canvasObjects.forEach(obj => {
+        if (obj.label) {
+            const position = document.getElementById('labelPosition')?.value || 'bottom';
+            positionLabel(obj.label, obj, position);
+        }
+    });
+    
+    fabricCanvas.renderAll();
 }
 
 
