@@ -55,6 +55,8 @@ function initializeCanvas() {
     // Event listeners
     fabricCanvas.on('object:modified', onObjectModified);
     fabricCanvas.on('object:moving', onObjectMoving);
+    fabricCanvas.on('object:scaling', onObjectScaling);
+    fabricCanvas.on('object:rotating', onObjectRotating);
     fabricCanvas.on('mouse:dblclick', onDoubleClick);
     
     console.log(`🎨 Canvas initialized: ${canvasWidth}×${canvasHeight}`);
@@ -386,6 +388,25 @@ function onObjectMoving(e) {
     onObjectModified(e);
 }
 
+function onObjectScaling(e) {
+    // Update label position while scaling
+    const obj = e.target;
+    if (obj.label) {
+        const position = document.getElementById('labelPosition')?.value || 'bottom';
+        positionLabel(obj.label, obj, position);
+        fabricCanvas.renderAll();
+    }
+}
+
+function onObjectRotating(e) {
+    // Update label position while rotating
+    const obj = e.target;
+    if (obj.label) {
+        const position = document.getElementById('labelPosition')?.value || 'bottom';
+        positionLabel(obj.label, obj, position);
+        fabricCanvas.renderAll();
+    }
+}
 
 function onDoubleClick(e) {
     const obj = e.target;
