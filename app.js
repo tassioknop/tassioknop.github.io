@@ -382,21 +382,46 @@ function autoArrangeImages() {
     
     if (objects.length === 0) return;
     
-    // Get current spacing setting
+    // Get current spacing and label settings
     const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    const labelPosition = document.getElementById('labelPosition')?.value || 'top-left';
+    const labelDistance = 25; // Same as in positionLabel function
     
     const cols = Math.ceil(Math.sqrt(objects.length));
     const rows = Math.ceil(objects.length / cols);
     
-    const cellWidth = (canvasWidth - (spacing * (cols + 1))) / cols;
-    const cellHeight = (canvasHeight - (spacing * (rows + 1))) / rows;
+    // Calculate extra space needed for labels
+    let extraSpaceTop = 0, extraSpaceBottom = 0, extraSpaceLeft = 0, extraSpaceRight = 0;
+    
+    if (labelPosition.includes('top')) {
+        extraSpaceTop = labelDistance + 20; // Label height + margin
+    }
+    if (labelPosition.includes('bottom')) {
+        extraSpaceBottom = labelDistance + 20;
+    }
+    if (labelPosition.includes('left') || labelPosition === 'left') {
+        extraSpaceLeft = 80; // Approximate label width
+    }
+    if (labelPosition.includes('right') || labelPosition === 'right') {
+        extraSpaceRight = 80;
+    }
+    
+    // Calculate available space for images after accounting for labels
+    const availableWidth = canvasWidth - (spacing * (cols + 1)) - extraSpaceLeft - extraSpaceRight;
+    const availableHeight = canvasHeight - (spacing * (rows + 1)) - extraSpaceTop - extraSpaceBottom;
+    
+    const cellWidth = availableWidth / cols;
+    const cellHeight = availableHeight / rows;
+    
+    console.log(`📐 Grid: ${cols}×${rows}, Cell: ${cellWidth.toFixed(0)}×${cellHeight.toFixed(0)}, Label space: T${extraSpaceTop} B${extraSpaceBottom} L${extraSpaceLeft} R${extraSpaceRight}`);
     
     objects.forEach((obj, index) => {
         const row = Math.floor(index / cols);
         const col = index % cols;
         
-        const x = spacing + (col * (cellWidth + spacing));
-        const y = spacing + (row * (cellHeight + spacing));
+        // Calculate image position with label space reserved
+        const x = spacing + extraSpaceLeft + (col * (cellWidth + spacing));
+        const y = spacing + extraSpaceTop + (row * (cellHeight + spacing));
         
         // Calculate max size for this cell
         const maxWidth = cellWidth - (spacing * 0.5);
@@ -416,15 +441,108 @@ function autoArrangeImages() {
             scaleY: scale
         });
         
+        // Position label with the reserved space
         if (obj.label) {
-            const position = document.getElementById('labelPosition')?.value || 'top-left';
-            positionLabel(obj.label, obj, position);
+            positionLabelInReservedSpace(obj.label, obj, labelPosition, labelDistance);
         }
     });
     
     fabricCanvas.renderAll();
-    console.log(`📐 Auto-arranged with ${spacing}px spacing`);
+    console.log(`📐 Auto-arranged with ${spacing}px spacing and reserved label space`);
 }
+
+// Position label within reserved grid space (no image movement needed)
+function positionLabelInReservedSpace(label, image, position, labelDistance = 25) {
+    const imageLeft = image.left;
+    const imageTop = image.top;
+    const imageWidth = image.getScaledWidth();
+    const imageHeight = image.getScaledHeight();
+    
+    let labelLeft, labelTop;
+    let labelOriginX = 'center', labelOriginY = 'top', labelTextAlign = 'center';
+    
+    switch (position) {
+        case 'top':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop - labelDistance;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
+            break;
+            
+        case 'top-left':
+            labelLeft = imageLeft;
+            labelTop = imageTop - labelDistance;
+            labelOriginX = 'left';
+            labelTextAlign = 'left';
+            break;
+            
+        case 'top-right':
+            labelLeft = imageLeft + imageWidth;
+            labelTop = imageTop - labelDistance;
+            labelOriginX = 'right';
+            labelTextAlign = 'right';
+            break;
+            
+        case 'bottom':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
+            break;
+            
+        case 'bottom-left':
+            labelLeft = imageLeft;
+            labelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'left';
+            labelTextAlign = 'left';
+            break;
+            
+        case 'bottom-right':
+            labelLeft = imageLeft + imageWidth;
+            labelTop = imageTop + imageHeight + labelDistance;
+            labelOriginX = 'right';
+            labelTextAlign = 'right';
+            break;
+            
+        case 'left':
+            labelLeft = imageLeft - labelDistance;
+            labelTop = imageTop + imageHeight / 2;
+            labelOriginX = 'right';
+            labelOriginY = 'center';
+            labelTextAlign = 'right';
+            break;
+            
+        case 'right':
+            labelLeft = imageLeft + imageWidth + labelDistance;
+            labelTop = imageTop + imageHeight / 2;
+            labelOriginX = 'left';
+            labelOriginY = 'center';
+            labelTextAlign = 'left';
+            break;
+            
+        case 'overlay':
+            labelLeft = imageLeft + imageWidth / 2;
+            labelTop = imageTop + imageHeight - 15;
+            labelOriginX = 'center';
+            labelTextAlign = 'center';
+            label.set({ 
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                fill: 'white',
+                padding: 5
+            });
+            break;
+    }
+    
+    // Apply label positioning (no bounds checking needed since space is reserved)
+    label.set({ 
+        left: labelLeft, 
+        top: labelTop,
+        textAlign: labelTextAlign,
+        originX: labelOriginX,
+        originY: labelOriginY
+    });
+}
+
 
 
 // Canvas control functions
@@ -435,9 +553,31 @@ function autoArrangeImagesInGrid(cols, rows) {
     const canvasWidth = fabricCanvas.getWidth();
     const canvasHeight = fabricCanvas.getHeight();
     const spacing = parseInt(document.getElementById('spacingSlider')?.value || 20);
+    const labelPosition = document.getElementById('labelPosition')?.value || 'top-left';
+    const labelDistance = 25;
     
-    const cellWidth = (canvasWidth - (spacing * (cols + 1))) / cols;
-    const cellHeight = (canvasHeight - (spacing * (rows + 1))) / rows;
+    // Calculate extra space needed for labels
+    let extraSpaceTop = 0, extraSpaceBottom = 0, extraSpaceLeft = 0, extraSpaceRight = 0;
+    
+    if (labelPosition.includes('top')) {
+        extraSpaceTop = labelDistance + 20;
+    }
+    if (labelPosition.includes('bottom')) {
+        extraSpaceBottom = labelDistance + 20;
+    }
+    if (labelPosition.includes('left') || labelPosition === 'left') {
+        extraSpaceLeft = 80;
+    }
+    if (labelPosition.includes('right') || labelPosition === 'right') {
+        extraSpaceRight = 80;
+    }
+    
+    // Calculate available space after accounting for labels
+    const availableWidth = canvasWidth - (spacing * (cols + 1)) - extraSpaceLeft - extraSpaceRight;
+    const availableHeight = canvasHeight - (spacing * (rows + 1)) - extraSpaceTop - extraSpaceBottom;
+    
+    const cellWidth = availableWidth / cols;
+    const cellHeight = availableHeight / rows;
     
     canvasObjects.forEach((obj, index) => {
         if (index >= cols * rows) return; // Skip excess images
@@ -445,8 +585,8 @@ function autoArrangeImagesInGrid(cols, rows) {
         const row = Math.floor(index / cols);
         const col = index % cols;
         
-        const x = spacing + (col * (cellWidth + spacing));
-        const y = spacing + (row * (cellHeight + spacing));
+        const x = spacing + extraSpaceLeft + (col * (cellWidth + spacing));
+        const y = spacing + extraSpaceTop + (row * (cellHeight + spacing));
         
         // Calculate max size for this cell
         const maxWidth = cellWidth - (spacing * 0.5);
@@ -468,13 +608,12 @@ function autoArrangeImagesInGrid(cols, rows) {
         
         // Update label position
         if (obj.label) {
-            const position = document.getElementById('labelPosition')?.value || 'top-left';
-            positionLabel(obj.label, obj, position);
+            positionLabelInReservedSpace(obj.label, obj, labelPosition, labelDistance);
         }
     });
     
     fabricCanvas.renderAll();
-    console.log(`📐 Arranged ${canvasObjects.length} images in ${cols}×${rows} grid with ${spacing}px spacing`);
+    console.log(`📐 Arranged ${canvasObjects.length} images in ${cols}×${rows} grid with label space reserved`);
 }
 
 
