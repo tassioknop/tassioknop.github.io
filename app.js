@@ -1,8 +1,8 @@
 /*!
- * Chart Layout Tool
+ * Chart Grid
  * Copyright (c) 2025 Tassio Knop
  * Licensed under MIT License
- * https://github.com/tassioknop/tassioknop.github.io
+ * https://github.com/tassioknop/tassioknop.github.io/chartgrid
  */
 
 // Configure PDF.js
@@ -14,7 +14,6 @@ if (typeof pdfjsLib !== 'undefined') {
 let images = [];
 let currentCols = 2;
 let currentRows = 2;
-let slots = {};
 
 // Interactive Canvas Variables
 let fabricCanvas = null;
@@ -813,189 +812,21 @@ function autoSetLayout() {
     }
 }
 
-
-// Create layout grid
-function createGrid() {
-    console.log(`🔧 Creating ${currentCols}x${currentRows} grid`);
-    
-    const preview = document.getElementById('layoutPreview');
-    if (!preview) return;
-    
-    const spacing = document.getElementById('spacingSlider')?.value || 20;
-    
-    preview.style.display = 'grid';
-    preview.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
-    preview.style.gap = spacing + 'px';
-    preview.innerHTML = '';
-    preview.classList.add('fade-in');
-    
-    const totalSlots = currentCols * currentRows;
-    console.log(`📐 Creating ${totalSlots} slots with ${spacing}px spacing`);
-    
-    for (let i = 0; i < totalSlots; i++) {
-        const slot = document.createElement('div');
-        slot.className = 'chart-slot';
-        slot.dataset.slot = i;
-        
-        const slotNumber = document.createElement('div');
-        slotNumber.className = 'slot-number';
-        slotNumber.textContent = i + 1;
-        slot.appendChild(slotNumber);
-        
-        const content = document.createElement('p');
-        content.textContent = `Slot ${i + 1}`;
-        slot.appendChild(content);
-        
-        const select = document.createElement('select');
-        select.innerHTML = `
-            <option value="">Select image...</option>
-            ${images.map((img, idx) => `<option value="${idx}">${img.name}</option>`).join('')}
-        `;
-        select.onchange = (e) => assignImage(i, e.target.value);
-        slot.appendChild(select);
-        
-        preview.appendChild(slot);
-    }
-    
-    // Auto-assign images
-    console.log('🎯 Auto-assigning images...');
-    images.forEach((img, i) => {
-        if (i < totalSlots) {
-            slots[i] = i;
-            assignImage(i, i);
-        }
-    });
-}
-
-// Assign image to slot
-function assignImage(slotIndex, imageIndex) {
-    const slot = document.querySelector(`[data-slot="${slotIndex}"]`);
-    if (!slot) return;
-    
-    const slotNumber = slot.querySelector('.slot-number');
-    
-    if (imageIndex === '' || imageIndex < 0) {
-        // Clear slot
-        delete slots[slotIndex];
-        slot.className = 'chart-slot';
-        slot.innerHTML = '';
-        
-        // Re-add slot number
-        const newSlotNumber = document.createElement('div');
-        newSlotNumber.className = 'slot-number';
-        newSlotNumber.textContent = parseInt(slotIndex) + 1;
-        slot.appendChild(newSlotNumber);
-        
-        // Add empty slot content
-        const content = document.createElement('p');
-        content.textContent = `Slot ${parseInt(slotIndex) + 1}`;
-        slot.appendChild(content);
-        
-        // Add select dropdown
-        const select = document.createElement('select');
-        select.innerHTML = `
-            <option value="">Select image...</option>
-            ${images.map((img, idx) => `<option value="${idx}">${img.name}</option>`).join('')}
-        `;
-        select.onchange = (e) => assignImage(slotIndex, e.target.value);
-        slot.appendChild(select);
-    } else {
-        // Assign image
-        const img = images[imageIndex];
-        slots[slotIndex] = parseInt(imageIndex);
-        slot.className = 'chart-slot has-image';
-        slot.innerHTML = '';
-        
-        // Re-add slot number
-        const newSlotNumber = document.createElement('div');
-        newSlotNumber.className = 'slot-number';
-        newSlotNumber.textContent = parseInt(slotIndex) + 1;
-        slot.appendChild(newSlotNumber);
-        
-        // Add image
-        const imgElement = document.createElement('img');
-        imgElement.src = img.src;
-        imgElement.alt = img.name;
-        slot.appendChild(imgElement);
-        
-        // Add label with position preview
-        const label = document.createElement('div');
-        const position = document.getElementById('labelPosition')?.value || 'bottom';
-        
-        // Set different styles based on selected position
-        let labelStyle = `
-            position: absolute; 
-            background: rgba(0,0,0,0.8); 
-            color: white; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-size: 12px; 
-            max-width: calc(100% - 10px);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            z-index: 2;
-        `;
-        
-        switch (position) {
-            case 'top':
-                labelStyle += `top: 30px; left: 50%; transform: translateX(-50%); text-align: center;`;
-                break;
-            case 'top-left':
-                labelStyle += `top: 30px; left: 10px; text-align: left;`;
-                break;
-            case 'top-right':
-                labelStyle += `top: 30px; right: 10px; text-align: right;`;
-                break;
-            case 'bottom':
-                labelStyle += `bottom: 45px; left: 50%; transform: translateX(-50%); text-align: center;`;
-                break;
-            case 'bottom-left':
-                labelStyle += `bottom: 45px; left: 10px; text-align: left;`;
-                break;
-            case 'bottom-right':
-                labelStyle += `bottom: 45px; right: 10px; text-align: right;`;
-                break;
-            case 'left':
-                labelStyle += `top: 50%; left: 10px; transform: translateY(-50%); text-align: left;`;
-                break;
-            case 'right':
-                labelStyle += `top: 50%; right: 10px; transform: translateY(-50%); text-align: right;`;
-                break;
-            case 'overlay':
-                labelStyle += `bottom: 60px; left: 50%; transform: translateX(-50%); text-align: center;`;
-                break;
-            case 'none':
-                labelStyle += `display: none;`;
-                break;
-            default:
-                labelStyle += `bottom: 45px; left: 50%; transform: translateX(-50%); text-align: center;`;
-        }
-        
-        label.style.cssText = labelStyle;
-        label.textContent = img.name;
-        label.className = 'chart-preview-label';
-        slot.appendChild(label);
-        
-        // Add select dropdown
-        const select = document.createElement('select');
-        select.innerHTML = `
-            <option value="">Remove image</option>
-            ${images.map((img, idx) => `<option value="${idx}" ${idx == imageIndex ? 'selected' : ''}>${img.name}</option>`).join('')}
-        `;
-        select.onchange = (e) => assignImage(slotIndex, e.target.value);
-        slot.appendChild(select);
-        
-        console.log(`✅ Assigned ${img.name} to slot ${slotIndex} with ${position} label preview`);
-    }
-}
-
-
 // Rename image
 function renameImage(index, newName) {
     if (images[index]) {
         images[index].name = newName;
-        createGrid(); // Refresh to show new names
+
+        // Update canvas objects
+        canvasObjects.forEach(obj => {
+            if (obj.originalIndex === index) {
+                obj.imageData.name = newName;
+                if (obj.label) {
+                    obj.label.set('text', newName);
+                    fabricCanvas.renderAll();
+                }
+            }
+        });
     }
 }
 
@@ -1085,7 +916,7 @@ function updateAutoLayoutInfo() {
     }
 }
 
-// Generate final image
+// Generate final image - Canvas only
 function generateImage() {
     console.log('🎨 Generating final image from canvas...');
     
@@ -1094,11 +925,22 @@ function generateImage() {
         return;
     }
     
-    // Export the canvas directly
+    // Get quality multiplier
+    const quality = document.getElementById('qualitySelect')?.value || 'large';
+    let multiplier;
+    switch (quality) {
+        case 'medium': multiplier = 1; break;
+        case 'large': multiplier = 1.5; break;
+        case 'xlarge': multiplier = 2; break;
+        case 'ultra': multiplier = 3; break;
+        default: multiplier = 1.5;
+    }
+    
+    // Export the canvas directly at high resolution
     const dataURL = fabricCanvas.toDataURL({
         format: 'png',
         quality: 1,
-        multiplier: 2 // High resolution
+        multiplier: multiplier // High resolution based on quality setting
     });
     
     // Update the final canvas
@@ -1124,6 +966,7 @@ function generateImage() {
     
     img.src = dataURL;
 }
+
 
 
 // Draw image with label
@@ -1410,15 +1253,38 @@ function downloadTIFF(canvas, filename) {
 
 // Utility functions
 function clearLayout() { 
-    console.log('🗑️ Clearing layout...');
-    slots = {}; 
-    createGrid(); 
+    console.log('🗑️ Clearing canvas layout...');
+    if (fabricCanvas) {
+        fabricCanvas.clear();
+        canvasObjects = [];
+        gridLines = [];
+        showGrid = false;
+        fabricCanvas.renderAll();
+    }
 }
 
+// Reset all - Canvas only  
 function resetAll() { 
     if (confirm('🔄 This will remove all images and start over. Are you sure?')) {
         console.log('🔄 Resetting everything...');
-        location.reload(); 
+        images = [];
+        canvasObjects = [];
+        if (fabricCanvas) {
+            fabricCanvas.clear();
+        }
+        
+        // Hide sections
+        ['uploadedImagesSection', 'canvasSection', 'layoutConfig', 
+         'instructions', 'advancedControls', 'controls', 'finalImagePreview'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+        
+        // Reset file input
+        const fileInput = document.getElementById('imageUpload');
+        if (fileInput) fileInput.value = '';
+        
+        updateDebug('Ready to upload new images');
     }
 }
 
@@ -1440,67 +1306,6 @@ async function copyToClipboard() {
     } catch (err) {
         alert('❌ Clipboard not supported in this browser. Try downloading instead.');
     }
-}
-
-// Update all label previews when position changes
-function updateAllLabelPreviews() {
-    const position = document.getElementById('labelPosition')?.value || 'bottom';
-    
-    document.querySelectorAll('.chart-preview-label').forEach(label => {
-        let labelStyle = `
-            position: absolute; 
-            background: rgba(0,0,0,0.8); 
-            color: white; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-size: 12px; 
-            max-width: calc(100% - 10px);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            z-index: 2;
-            pointer-events: none;
-        `;
-        
-        switch (position) {
-            case 'top':
-                labelStyle += `top: 30px; left: 50%; transform: translateX(-50%); text-align: center;`;
-                break;
-            case 'top-left':
-                labelStyle += `top: 30px; left: 10px; text-align: left;`;
-                break;
-            case 'top-right':
-                labelStyle += `top: 30px; right: 10px; text-align: right;`;
-                break;
-            case 'bottom':
-                labelStyle += `bottom: 45px; left: 50%; transform: translateX(-50%); text-align: center;`;
-                break;
-            case 'bottom-left':
-                labelStyle += `bottom: 45px; left: 10px; text-align: left;`;
-                break;
-            case 'bottom-right':
-                labelStyle += `bottom: 45px; right: 10px; text-align: right;`;
-                break;
-            case 'left':
-                labelStyle += `top: 50%; left: 10px; transform: translateY(-50%); text-align: left;`;
-                break;
-            case 'right':
-                labelStyle += `top: 50%; right: 10px; transform: translateY(-50%); text-align: right;`;
-                break;
-            case 'overlay':
-                labelStyle += `bottom: 60px; left: 50%; transform: translateX(-50%); text-align: center;`;
-                break;
-            case 'none':
-                labelStyle += `display: none;`;
-                break;
-            default:
-                labelStyle += `bottom: 45px; left: 50%; transform: translateX(-50%); text-align: center;`;
-        }
-        
-        label.style.cssText = labelStyle;
-    });
-    
-    console.log(`🏷️ Updated all label previews to: ${position}`);
 }
 
 // Update canvas spacing in real-time
